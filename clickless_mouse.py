@@ -1,9 +1,11 @@
 # prototype of a clickless mouse mode using Talon. This does not coexist with the zoom, control mouse or mouse grid
 # todo:
-#  (1) multi-monitor support
-#  (2) smoother, accelerated scrolling
-#  (3) horizontal scrolling
-
+#  (1) smoother, accelerated scrolling
+#  (2) horizontal scrolling
+#  (3) cleanup and simplify bounds around displayed options
+#  (4) detect non-clickless mouse events to dismiss
+#  (5) decide if the circular case 9 is worth keeping
+#  (6) better handling of mixed resolutions - 4k + non-4k etc
 from talon import Module, Context, app, canvas, screen, ui, ctrl, cron, actions
 
 import math, time
@@ -18,9 +20,14 @@ import math, time
 # rh = right click old, DISABLED, doesn't work yet.
 # ka = keep alive for e.g. leaving the thing up for easy scroll down/up on webpages. no action
 horizontal_button_order = ["l", "ld", "lt", "lh", "r", "su", "sd", "ka"]
+left_mouse_button_index = 0
+right_mouse_button_index = 1
+
 
 mod = Module()
 ctx = Context()
+mod.mode("clickless_mouse_enabled", desc="Indicates the clickless mouse is enabled")
+
 STATE_MOUSE_IDLE = 0
 STATE_MOUSE_MOVING = 1
 STATE_MOUSE_STOPPED = 2
@@ -60,6 +67,12 @@ release_button_delay = mod.setting(
     default=50,
     desc="The delay (ms) before releasing the held mouse button",
 )
+prevent_redisplay_for_minor_motions = mod.setting(
+    "clickless_mouse_prevent_redisplay_for_minor_motions",
+    type=int,
+    default=0,
+    desc="A value of 1 or more prevents re-display for minor motions",
+)
 
 
 class dwell_button:
@@ -86,10 +99,6 @@ class clickless_mouse:
     def __init__(self):
         self.button_positions = []
         self.screen = None
-        self.offset_x = None
-        self.offset_y = None
-        self.width = None
-        self.height = None
         self.mcanvas = None
         self.x, self.y = ctrl.mouse_pos()
         self._dwell_x, self._dwell_y = ctrl.mouse_pos()
@@ -98,18 +107,27 @@ class clickless_mouse:
         self.enabled = False
         self.update_cron = None
         self.draw_registered = False
+
+        # the bounds around the displayed options. if you go outside, options
+        # are hidden
         self.y_min = self.y_max = self.x_min = self.x_max = 0
 
     def __del__(self):
         self.mcanvas = None
 
     def is_left_down(self):
-        left_index = 0
-
-        return left_index in ctrl.mouse_buttons_down()
+        return left_mouse_button_index in ctrl.mouse_buttons_down()
 
     def enable(self, enable):
         self.enabled = enable
+        if enable == self.enable:
+            return
+
+        self.enabled = enable
+        if enable:
+            actions.mode.enable("user.clickless_mouse_enabled")
+        else:
+            actions.mode.disable("user.clickless_mouse_enabled")
 
         if self.enabled:
             self.update_cron = cron.interval("16ms", self.update)
@@ -128,16 +146,22 @@ class clickless_mouse:
         self.button_positions = []
         self.scroll_progress = 0
         self.x, self.y = ctrl.mouse_pos()
+
         self._dwell_x, self._dwell_y = self.x, self.y
+
+        # alias the cursor position for convenience
         x = self.x
         y = self.y
 
-        # upper left corner
-        if x <= radius.get() * 3.5 and y <= radius.get() * 3.25:
-            # print("case 1")
-            # print("x <= 70 and y <= 65")
+        # calculate the screen coordinates
+        x_screen = self.x - self.screen.x
+        y_screen = self.y - self.screen.y
 
-            y_pos = y + math.ceil(radius.get() * 2)
+        # upper left corner
+        if x_screen <= radius.get() * 3.5 and y_screen <= radius.get() * 3.25:
+            # print("case 1")
+
+            y_pos = y + math.ceil(radius.get() * 3)
             x_pos = None
             for index, button_label in enumerate(horizontal_button_order):
                 x_pos = x + math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
@@ -148,16 +172,20 @@ class clickless_mouse:
                         button_label if not self.is_left_down() else "lr",
                     )
                 )
+                # print("{},{}".format(x_pos, y_pos))
 
-            self.y_min = -2 * radius.get()
-            self.y_max = y + math.ceil(radius.get() * 4)
-            self.x_min = -2 * radius.get()
+            self.y_min = self.screen.y - 2 * radius.get()
+            self.y_max = y + math.ceil(radius.get() * 5)
+            self.x_min = self.screen.x - 2 * radius.get()
             self.x_max = x + radius.get() * (len(horizontal_button_order) + 1) * 2
 
         # upper right corner
-        elif x + radius.get() * 3.5 >= self.width and y <= radius.get() * 3.25:
+        elif (
+            x_screen + radius.get() * 3.5 >= self.screen.width
+            and y_screen <= radius.get() * 3.25
+        ):
             # print("case 2")
-            y_pos = y + math.ceil(radius.get() * 2)
+            y_pos = y + math.ceil(radius.get() * 3)
             x_pos = None
             for index, button_label in enumerate(horizontal_button_order):
                 x_pos = x - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
@@ -169,18 +197,20 @@ class clickless_mouse:
                     )
                 )
 
-            self.y_min = -2 * radius.get()
-            self.y_max = y + math.ceil(radius.get() * 4)
+            self.y_min = self.screen.y - 2 * radius.get()
+            self.y_max = y + math.ceil(radius.get() * 5)
             self.x_min = x - math.ceil(
                 radius.get() * (len(horizontal_button_order) + 1) * 2
             )
             self.x_max = x + math.ceil(radius.get() * 2)
 
         # lower left corner
-        elif x <= radius.get() * 3.5 and y + radius.get() * 3.25 >= self.height:
-            # print("x <= 70 and y + 65 >= self.height")
+        elif (
+            x_screen <= radius.get() * 3.5
+            and y_screen + radius.get() * 3.25 >= self.screen.height
+        ):
             # print("case 3")
-            y_pos = y - math.ceil(radius.get() * 2)
+            y_pos = y - math.ceil(radius.get() * 3)
             x_pos = None
             for index, button_label in enumerate(horizontal_button_order):
                 x_pos = x + math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
@@ -192,7 +222,8 @@ class clickless_mouse:
                     )
                 )
 
-            self.y_min = y - math.ceil(radius.get() * 4)
+            # todo: something better for the bounds
+            self.y_min = y - math.ceil(radius.get() * 5)
             self.y_max = y + math.ceil(radius.get() * 4)
             self.x_min = x - math.ceil(radius.get() * 4)
             self.x_max = x + math.ceil(
@@ -201,11 +232,12 @@ class clickless_mouse:
 
         # lower right corner
         elif (
-            x + radius.get() * 3.5 >= self.width
-            and y + math.ceil(radius.get() * 3.25) >= self.height
+            x_screen + radius.get() * 3.5 >= self.screen.width
+            and y_screen + math.ceil(radius.get() * 3.25) >= self.screen.height
         ):
+            # print("case 4")
             x_pos = None
-            y_pos = y - math.ceil(radius.get() * 2)
+            y_pos = y - math.ceil(radius.get() * 3)
             for index, button_label in enumerate(horizontal_button_order):
                 x_pos = x - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
                 self.button_positions.append(
@@ -216,8 +248,10 @@ class clickless_mouse:
                     )
                 )
 
-            self.y_min = y - math.ceil(radius.get() * 4)
-            self.y_max = self.height + math.ceil(radius.get() * 4)
+            self.y_min = y - math.ceil(radius.get() * 5)
+            self.y_max = (
+                self.screen.y + self.screen.height + math.ceil(radius.get() * 4)
+            )
             self.x_min = x - math.ceil(
                 radius.get() * (len(horizontal_button_order) + 1) * 2
             )
@@ -225,12 +259,12 @@ class clickless_mouse:
 
         # bottom edge, sufficient space to draw to the right
         elif (
-            y + math.ceil(radius.get() * 3.25) >= self.height
-            and x + math.ceil(radius.get() * 16) <= self.width
+            y_screen + math.ceil(radius.get() * 3.25) >= self.screen.height
+            and x_screen + math.ceil(radius.get() * 16) <= self.screen.width
         ):
             # print("case 5")
             x_pos = None
-            y_pos = y - math.ceil(radius.get() * 2)
+            y_pos = y - math.ceil(radius.get() * 3)
             for index, button_label in enumerate(horizontal_button_order):
                 x_pos = x + math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
                 self.button_positions.append(
@@ -241,8 +275,10 @@ class clickless_mouse:
                     )
                 )
 
-            self.y_min = y - math.ceil(radius.get() * 4)
-            self.y_max = self.height + math.ceil(radius.get() * 4)
+            self.y_min = y - math.ceil(radius.get() * 5)
+            self.y_max = (
+                self.screen.y + self.screen.height + math.ceil(radius.get() * 4)
+            )
             self.x_min = x - math.ceil(radius.get() * 4)
             self.x_max = x + math.ceil(
                 radius.get() * (len(horizontal_button_order) + 1) * 2
@@ -250,14 +286,18 @@ class clickless_mouse:
 
         # bottom edge, insufficient space to draw to the right
         elif (
-            y + math.ceil(radius.get() * 3.25) >= self.height
-            and x + math.ceil(radius.get() * 16) >= self.width
+            y_screen + math.ceil(radius.get() * 3.25) >= self.screen.height
+            and x_screen + math.ceil(radius.get() * 16) >= self.screen.width
         ):
-            # print("case 5")
+            # print("case 6")
             x_pos = None
-            y_pos = y - math.ceil(radius.get() * 2)
+            y_pos = y - self.screen.y - math.ceil(radius.get() * 4)
             for index, button_label in enumerate(horizontal_button_order):
-                x_pos = x - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
+                x_pos = (
+                    x
+                    - self.screen.x
+                    - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
+                )
                 self.button_positions.append(
                     dwell_button(
                         x_pos,
@@ -266,18 +306,18 @@ class clickless_mouse:
                     )
                 )
 
-            self.y_min = y - math.ceil(radius.get() * 4)
-            self.y_max = self.height + math.ceil(radius.get() * 4)
+            self.y_min = y - math.ceil(radius.get() * 5)
+            self.y_max = self.screen.height + math.ceil(radius.get() * 4)
             self.x_min = x - math.ceil(
                 radius.get() * (len(horizontal_button_order) + 1) * 2
             )
             self.x_max = x + math.ceil(radius.get() * 2)
 
-        elif x <= radius.get() * 3.5:
-            # print("case 6")
+        elif x_screen <= radius.get() * 3.5:
+            # print("case 7")
 
             x_pos = None
-            y_pos = y + math.ceil(radius.get() * 2)
+            y_pos = y + math.ceil(radius.get() * 3)
             for index, button_label in enumerate(horizontal_button_order):
                 x_pos = x + math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
                 self.button_positions.append(
@@ -289,16 +329,16 @@ class clickless_mouse:
                 )
 
             self.y_min = y - math.ceil(radius.get() * 4)
-            self.y_max = y + math.ceil(radius.get() * 4)
+            self.y_max = y + math.ceil(radius.get() * 5)
             self.x_min = x - math.ceil(radius.get() * 2)
             self.x_max = x + math.ceil(
                 radius.get() * (len(horizontal_button_order) + 1) * 2
             )
 
-        elif x + radius.get() * 3.5 >= self.width:
-            # print("case 7")
+        elif x_screen + radius.get() * 3.5 >= self.screen.width:
+            # print("case 8")
             x_pos = None
-            y_pos = y + math.ceil(radius.get() * 2)
+            y_pos = y + math.ceil(radius.get() * 3)
             for index, button_label in enumerate(horizontal_button_order):
                 x_pos = x - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
                 self.button_positions.append(
@@ -310,15 +350,17 @@ class clickless_mouse:
                 )
 
             self.y_min = y - math.ceil(radius.get() * 4)
-            self.y_max = y + math.ceil(radius.get() * 4)
+            self.y_max = y + math.ceil(radius.get() * 5)
             self.x_min = x - math.ceil(
                 radius.get() * (len(horizontal_button_order) + 1) * 2
             )
             self.x_max = x + math.ceil(radius.get() * 2)
 
-        elif not y <= radius.get() * 3.25 and x + radius.get() * 3.5 <= self.width:
-            # print("case 8")
-            # print("y + 65 < self.height and x + 70 < self.width")
+        elif (
+            not y_screen <= radius.get() * 3.25
+            and x_screen + radius.get() * 3.5 <= self.screen.width
+        ):
+            # print("case 9")
             self.button_positions.append(
                 dwell_button(
                     x - math.ceil(radius.get() * 2.25),
@@ -385,13 +427,13 @@ class clickless_mouse:
             self.x_max = x + math.ceil(radius.get() * 7)
 
         elif (
-            x + radius.get() * 3.5 <= self.width
-            and y <= radius.get() * 3.25
-            and x + math.ceil(radius.get() * 13.75)
-        ) <= self.width:
-            # print("case 9")
+            x_screen + radius.get() * 3.5 <= self.screen.width
+            and y_screen <= radius.get() * 3.25
+            and x_screen + math.ceil(radius.get() * 13.75)
+        ) <= self.screen.width:
+            # print("case 10")
             x_pos = None
-            y_pos = y + math.ceil(radius.get() * 2)
+            y_pos = y + math.ceil(radius.get() * 3)
             for index, button_label in enumerate(horizontal_button_order):
                 x_pos = x + math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
                 self.button_positions.append(
@@ -403,20 +445,20 @@ class clickless_mouse:
                 )
 
             self.y_min = y - math.ceil(radius.get() * 4)
-            self.y_max = y + math.ceil(radius.get() * 4)
+            self.y_max = y + math.ceil(radius.get() * 5)
             self.x_min = x - math.ceil(radius.get() * 2)
             self.x_max = x + math.ceil(
                 radius.get() * (len(horizontal_button_order) + 1) * 2
             )
 
         elif (
-            x - self.offset_x + radius.get() * 3.5 <= self.width
-            and y - self.offset_y <= radius.get() * 3.25
-            and x - self.offset_x + math.ceil(radius.get() * 13.75)
-        ) >= self.width:
-            # print("case 10")
+            x_screen + radius.get() * 3.5 <= self.screen.width
+            and y_screen <= radius.get() * 3.25
+            and x_screen + math.ceil(radius.get() * 13.75)
+        ) >= self.screen.width:
+            # print("case 11")
             x_pos = None
-            y_pos = y + math.ceil(radius.get() * 2)
+            y_pos = y + math.ceil(radius.get() * 3)
             for index, button_label in enumerate(horizontal_button_order):
                 x_pos = x - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
                 self.button_positions.append(
@@ -428,19 +470,19 @@ class clickless_mouse:
                 )
 
             self.y_min = y - math.ceil(radius.get() * 4)
-            self.y_max = y + math.ceil(radius.get() * 4)
+            self.y_max = y + math.ceil(radius.get() * 5)
             self.x_min = x - math.ceil(
                 radius.get() * (len(horizontal_button_order) + 1) * 2
             )
             self.x_max = x + math.ceil(radius.get() * 2)
 
         elif (
-            x - self.offset_x + radius.get() * 3.5 >= self.width
-            and y - self.offset_y <= radius.get() * 3.25
+            x_screen + radius.get() * 3.5 >= self.screen.width
+            and y_screen <= radius.get() * 3.25
         ):
-            # print("case 11")
+            # print("case 12")
             x_pos = None
-            y_pos = y + math.ceil(radius.get() * 2)
+            y_pos = y + math.ceil(radius.get() * 3)
             for index, button_label in enumerate(horizontal_button_order):
                 x_pos = x - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
                 self.button_positions.append(
@@ -451,8 +493,8 @@ class clickless_mouse:
                     )
                 )
 
-            self.y_min = y - math.ceil(radius.get() * 4)
-            self.y_max = y + math.ceil(radius.get() * 4)
+            self.y_min = y - math.ceil(radius.get() * 5)
+            self.y_max = y + math.ceil(radius.get() * 5)
             self.x_min = x - math.ceil(
                 radius.get() * (len(horizontal_button_order) + 1) * 2
             )
@@ -460,9 +502,12 @@ class clickless_mouse:
         else:
             print("not handled: {},{}".format(x, y))
 
+        # print(self.button_positions)
+
     def update(self):
         # print("update")
         x, y = ctrl.mouse_pos()
+        now = time.perf_counter()
         # print("({},{})".format(x,y))
         if self.state == STATE_MOUSE_IDLE:
             # print("idle")
@@ -476,7 +521,7 @@ class clickless_mouse:
 
             if x == self.x and y == self.y:
                 self.x, self.y = ctrl.mouse_pos()
-                self.last_time = time.perf_counter()
+                self.last_time = now
                 self.state = STATE_MOUSE_STOPPED
             else:
                 self.x, self.y = ctrl.mouse_pos()
@@ -485,19 +530,21 @@ class clickless_mouse:
             # print("stopped")
 
             if x == self.x and y == self.y:
-                if time.perf_counter() - self.last_time >= mouse_idle.get():
-                    self.last_time = time.perf_counter()
+                if now - self.last_time >= mouse_idle.get():
+                    self.last_time = now
                     self._dwell_x, self._dwell_y = ctrl.mouse_pos()
                     screen = ui.screen_containing(self.x, self.y)
 
-                    # if screen != self.screen:
-                    self.screen = screen
-                    self.offset_x = self.screen.x
-                    self.offset_y = self.screen.y
-                    self.width = self.screen.width
-                    self.height = self.screen.height
-                    self.mcanvas = None
-                    self.mcanvas = canvas.Canvas.from_screen(self.screen)
+                    # if the screen is cached, it won't always appear over
+                    # certain windows
+                    if True:  # screen != self.screen:
+                        self.screen = screen
+                        if self.mcanvas:
+                            self.mcanvas.close()
+                            self.mcanvas = None
+                        self.mcanvas = canvas.Canvas.from_screen(self.screen)
+                        # print(self.mcanvas.rect)
+                        # print(ctrl.mouse_pos())
 
                     # print(str(screen))
                     # print(str(ctrl.mouse_pos()))
@@ -511,34 +558,31 @@ class clickless_mouse:
             # print("display")
             item_hit = None
             draw_options = True
-
             for b in self.button_positions:
                 if (x <= b.x + radius.get() and b.x - radius.get() <= x) and (
                     y <= b.y + radius.get() and b.y - radius.get() <= y
                 ):
                     b.hit_check(True)
-                    self.last_time = time.perf_counter()
+                    self.last_time = now
                     item_hit = b
                 else:
                     b.hit_check(False)
 
             if (
                 not item_hit
-                and time.perf_counter() - self.last_time >= auto_hide.get()
+                and now - self.last_time >= auto_hide.get()
                 and (self._dwell_x == x or self._dwell_y == y)
             ):
                 # update the position to prevent re-display for minor moves
                 # this may not be preferred.
-                # self.x = self._dwell_x
-                # self.y = self._dwell_y
+                if prevent_redisplay_for_minor_motions.get() >= 1:
+                    self.x = self._dwell_x
+                    self.y = self._dwell_y
 
                 self.state = STATE_MOUSE_IDLE
                 draw_options = False
 
-            elif (
-                item_hit
-                and time.perf_counter() - item_hit.last_hit_time >= dwell_time.get()
-            ):
+            elif item_hit and now - item_hit.last_hit_time >= dwell_time.get():
                 draw_options = False
 
                 # print("performing action...")
@@ -550,42 +594,40 @@ class clickless_mouse:
                     # print("left hold")
                     if not self.is_left_down():
                         # print("pressing button 0 down")
-                        ctrl.mouse_click(button=0, down=True)
+                        ctrl.mouse_click(button=left_mouse_button_index, down=True)
                     else:
                         # print("pressing button 0 up")
                         actions.sleep("{}ms".format(release_button_delay.get()))
                         ctrl.mouse_click()
-                        ctrl.mouse_click(button=0, up=True)
+                        ctrl.mouse_click(button=left_mouse_button_index, up=True)
 
                     # print(str(ctrl.mouse_buttons_down()))
                 elif item_hit.action == "lr":
                     if self.is_left_down():
                         actions.sleep("{}ms".format(release_button_delay.get()))
-                        ctrl.mouse_click(button=0, up=True)
+                        ctrl.mouse_click(button=left_mouse_button_index, up=True)
 
                 elif item_hit.action == "l":
-                    ctrl.mouse_click(button=0, hold=16000)
+                    ctrl.mouse_click(button=left_mouse_button_index)
 
                 elif item_hit.action == "ld":
-                    ctrl.mouse_click(button=0, hold=16000)
-                    ctrl.mouse_click(button=0, hold=16000)
+                    ctrl.mouse_click(button=left_mouse_button_index)
+                    ctrl.mouse_click(button=left_mouse_button_index)
 
                 elif item_hit.action == "lt":
-                    ctrl.mouse_click(button=0, hold=16000)
-                    ctrl.mouse_click(button=0, hold=16000)
-                    ctrl.mouse_click(button=0, hold=16000)
+                    ctrl.mouse_click(button=left_mouse_button_index)
+                    ctrl.mouse_click(button=left_mouse_button_index)
+                    ctrl.mouse_click(button=left_mouse_button_index)
 
                 elif item_hit.action == "r":
-                    ctrl.mouse_click(button=1, hold=16000)
+                    ctrl.mouse_click(button=1)
 
                 elif item_hit.action == "rh":
-                    index = 1
-                    if index not in ctrl.mouse_buttons_down():
-                        ctrl.mouse_click(button=1, down=True)
+                    if right_mouse_button_index not in ctrl.mouse_buttons_down():
+                        ctrl.mouse_click(button=right_mouse_button_index, down=True)
                     else:
-                        actions.sleep("50ms")
-                        ctrl.mouse_click(button=1, up=True)
-                        # print(str(ctrl.mouse_buttons_down()))
+                        actions.sleep("{}ms".format(release_button_delay.get()))
+                        ctrl.mouse_click(button=right_mouse_button_index, up=True)
                 elif item_hit.action == "su":
                     actions.mouse_scroll(y=-10)
                     draw_options = True
@@ -607,10 +649,9 @@ class clickless_mouse:
 
             if draw_options:
                 if self._dwell_x != x or self._dwell_y != y:
-                    self.last_time = time.perf_counter()
+                    self.last_time = now
                     self._dwell_x, self._dwell_y = ctrl.mouse_pos()
 
-                # print("draw options...")
                 if not self.draw_registered:
                     self.mcanvas.register("draw", self.draw)
                     self.draw_registered = True
@@ -622,14 +663,19 @@ class clickless_mouse:
         self.draw_options(canvas)
 
     def draw_options(self, canvas):
+        x = self.x
+        y = self.y
         paint = canvas.paint
         paint.color = "ff0000"
         paint.style = paint.Style.FILL
-        canvas.draw_circle(self.x, self.y, 3.5)
+        # print("{},{}".format(self.x, self.y))
+        # print(canvas.rect)
+        canvas.draw_line(x - radius.get(), y, x + radius.get(), y)
+        canvas.draw_line(x, y - radius.get(), x, y + radius.get())
 
         for b in self.button_positions:
             # draw outer circle
-            paint.color = "ffffffAA"
+            paint.color = "ffffffaa"
             paint.style = paint.Style.STROKE
             canvas.draw_circle(b.x, b.y, radius.get() + 1)
 
@@ -659,7 +705,6 @@ class clickless_mouse:
             paint.textsize = radius.get()
             paint.color = "ffffffff"
 
-            # text_rect = canvas.paint.measure_text(text_string)[1]
             canvas.draw_text(text_string, b.x, b.y)
 
 
@@ -673,5 +718,7 @@ class Actions:
         cm.toggle()
 
 
-# uncomment for quick testing
-cm.enable(True)
+# uncomment the following for quick testing
+# def on_ready():
+#     cm.enable(True)
+# app.register("ready", on_ready)

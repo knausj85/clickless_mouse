@@ -6,6 +6,7 @@
 #  (4) detect non-clickless mouse events to dismiss
 #  (5) decide if the circular case 9 is worth keeping
 #  (6) better handling of mixed resolutions - 4k + non-4k etc
+#  (7) consolidate cases? many are redundant now if we simply draw horizontally
 from talon import Module, Context, app, canvas, screen, ui, ctrl, cron, actions
 
 import math, time
@@ -111,9 +112,6 @@ class clickless_mouse:
         # the bounds around the displayed options. if you go outside, options
         # are hidden
         self.y_min = self.y_max = self.x_min = self.x_max = 0
-
-    def __del__(self):
-        self.mcanvas = None
 
     def is_left_down(self):
         return left_mouse_button_index in ctrl.mouse_buttons_down()
@@ -260,7 +258,8 @@ class clickless_mouse:
         # bottom edge, sufficient space to draw to the right
         elif (
             y_screen + math.ceil(radius.get() * 3.25) >= self.screen.height
-            and x_screen + math.ceil(radius.get() * 16) <= self.screen.width
+            and x_screen + math.ceil(radius.get() * len(horizontal_button_order) * 2)
+            <= self.screen.width
         ):
             # print("case 5")
             x_pos = None
@@ -287,7 +286,8 @@ class clickless_mouse:
         # bottom edge, insufficient space to draw to the right
         elif (
             y_screen + math.ceil(radius.get() * 3.25) >= self.screen.height
-            and x_screen + math.ceil(radius.get() * 16) >= self.screen.width
+            and x_screen + math.ceil(radius.get() * len(horizontal_button_order) * 2)
+            >= self.screen.width
         ):
             # print("case 6")
             x_pos = None
@@ -313,6 +313,7 @@ class clickless_mouse:
             )
             self.x_max = x + math.ceil(radius.get() * 2)
 
+        # left edge, not in corner
         elif x_screen <= radius.get() * 3.5:
             # print("case 7")
 
@@ -335,6 +336,7 @@ class clickless_mouse:
                 radius.get() * (len(horizontal_button_order) + 1) * 2
             )
 
+        # right edge, not in corner
         elif x_screen + radius.get() * 3.5 >= self.screen.width:
             # print("case 8")
             x_pos = None
@@ -356,6 +358,8 @@ class clickless_mouse:
             )
             self.x_max = x + math.ceil(radius.get() * 2)
 
+        # not along edges and not in corner
+        # draw all around cursor
         elif (
             not y_screen <= radius.get() * 3.25
             and x_screen + radius.get() * 3.5 <= self.screen.width
@@ -426,11 +430,13 @@ class clickless_mouse:
             self.x_min = x - math.ceil(radius.get() * 7)
             self.x_max = x + math.ceil(radius.get() * 7)
 
+        # top edge, sufficient space to the right
         elif (
-            x_screen + radius.get() * 3.5 <= self.screen.width
-            and y_screen <= radius.get() * 3.25
-            and x_screen + math.ceil(radius.get() * 13.75)
-        ) <= self.screen.width:
+            y_screen <= radius.get() * 3.25
+            and x_screen + radius.get() * 3.5 <= self.screen.width
+            and x_screen + math.ceil(radius.get() * len(horizontal_button_order) * 2)
+            <= self.screen.width
+        ):
             # print("case 10")
             x_pos = None
             y_pos = y + math.ceil(radius.get() * 3)
@@ -451,11 +457,15 @@ class clickless_mouse:
                 radius.get() * (len(horizontal_button_order) + 1) * 2
             )
 
+        # top edge, insufficient space to the right
         elif (
             x_screen + radius.get() * 3.5 <= self.screen.width
+            and (
+                x_screen + math.ceil(radius.get() * len(horizontal_button_order) * 2)
+                >= self.screen.width
+            )
             and y_screen <= radius.get() * 3.25
-            and x_screen + math.ceil(radius.get() * 13.75)
-        ) >= self.screen.width:
+        ):
             # print("case 11")
             x_pos = None
             y_pos = y + math.ceil(radius.get() * 3)
@@ -475,7 +485,7 @@ class clickless_mouse:
                 radius.get() * (len(horizontal_button_order) + 1) * 2
             )
             self.x_max = x + math.ceil(radius.get() * 2)
-
+        # top edge, insufficient space to the right
         elif (
             x_screen + radius.get() * 3.5 >= self.screen.width
             and y_screen <= radius.get() * 3.25
@@ -721,4 +731,6 @@ class Actions:
 # uncomment the following for quick testing
 # def on_ready():
 #     cm.enable(True)
+
+
 # app.register("ready", on_ready)

@@ -96,6 +96,8 @@ release_button_delay = mod.setting(
     default=50,
     desc="The delay (ms) before releasing the held mouse button",
 )
+
+
 prevent_redisplay_for_minor_motions = mod.setting(
     "clickless_mouse_prevent_redisplay_for_minor_motions",
     type=int,
@@ -136,6 +138,11 @@ class clickless_mouse:
         self.update_cron = None
         self.draw_registered = False
 
+        # after moving the mouse to perform an action,
+        # avoid a state change in the first update.
+        # this prevents an unnecessary re-display
+        self.suppress_next_update = False
+
         # the bounds around the displayed options. if you go outside, options
         # are hidden
         self.y_min = self.y_max = self.x_min = self.x_max = 0
@@ -155,10 +162,12 @@ class clickless_mouse:
             actions.mode.disable("user.clickless_mouse_enabled")
 
         if self.enabled:
+            self.x, self.y = ctrl.mouse_pos()
             self.update_cron = cron.interval("16ms", self.update)
         elif self.update_cron:
             cron.cancel(self.update_cron)
             self.update_cron = None
+            self.state = STATE_MOUSE_IDLE
             if self.draw_registered:
                 self.mcanvas.unregister("draw", self.draw)
                 self.mcanvas.close()
@@ -579,11 +588,14 @@ class clickless_mouse:
         # print("update")
         x, y = ctrl.mouse_pos()
         now = time.perf_counter()
-        # print("({},{})".format(x,y))
+        # print("({},{})".format(x, y))
         if self.state == STATE_MOUSE_IDLE:
             # print("idle")
-
-            if x != self.x and y != self.y:
+            if self.suppress_next_update:
+                self.suppress_next_update = False
+                self.x, self.y = ctrl.mouse_pos()
+                return
+            elif math.fabs(self.x - x) > 1 or math.fabs(self.y - y) > 1:
                 self.x, self.y = ctrl.mouse_pos()
                 self.state = STATE_MOUSE_MOVING
 
@@ -661,6 +673,7 @@ class clickless_mouse:
                     and action != "ka"
                     and action != "x"
                 ):
+                    self.suppress_next_update = True
                     ctrl.mouse_move(self.x, self.y)
 
                 if item_hit.action == "lh":
@@ -715,7 +728,9 @@ class clickless_mouse:
                     self.state = STATE_MOUSE_IDLE
 
                 if action != "su" and action != "sd" and action != "ka":
+                    # print("({},{})".format(self.x, self.y))
                     self.x, self.y = ctrl.mouse_pos()
+                    # print("({},{})".format(self.x, self.y))
                     self.state = STATE_MOUSE_IDLE
 
             elif x > self.x_max or x < self.x_min or y > self.y_max or y < self.y_min:

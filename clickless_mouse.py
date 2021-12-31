@@ -7,6 +7,7 @@
 #  (5) decide if the circular case 9 is worth keeping
 #  (6) better handling of mixed resolutions - 4k + non-4k etc
 #  (7) consolidate cases? many are redundant now if we simply draw horizontally
+#  (8) Clicking some contexts menus (e.g. run as admin) in the start menu requires a double click???
 from talon import Module, Context, app, canvas, screen, ui, ctrl, cron, actions
 
 import math, time
@@ -116,13 +117,13 @@ class clickless_mouse:
     def is_left_down(self):
         return left_mouse_button_index in ctrl.mouse_buttons_down()
 
-    def enable(self, enable):
-        self.enabled = enable
-        if enable == self.enable:
+    def enable(self, _enable):
+        if _enable == self.enabled:
             return
 
-        self.enabled = enable
-        if enable:
+        self.enabled = _enable
+
+        if self.enabled:
             actions.mode.enable("user.clickless_mouse_enabled")
         else:
             actions.mode.disable("user.clickless_mouse_enabled")
@@ -136,6 +137,7 @@ class clickless_mouse:
                 self.mcanvas.unregister("draw", self.draw)
                 self.mcanvas.close()
                 self.mcanvas = None
+                self.draw_registered = False
 
     def toggle(self):
         self.enable(not self.enabled)
@@ -583,13 +585,13 @@ class clickless_mouse:
                 and now - self.last_time >= auto_hide.get()
                 and (self._dwell_x == x or self._dwell_y == y)
             ):
-                # update the position to prevent re-display for minor moves
+                # update the position to prevent re-display for minor moves within the bounds
                 # this may not be preferred.
                 if prevent_redisplay_for_minor_motions.get() >= 1:
-                    self.x = self._dwell_x
-                    self.y = self._dwell_y
+                    self.x, self.y = ctrl.mouse_pos()
 
                 self.state = STATE_MOUSE_IDLE
+
                 draw_options = False
 
             elif item_hit and now - item_hit.last_hit_time >= dwell_time.get():
@@ -608,7 +610,6 @@ class clickless_mouse:
                     else:
                         # print("pressing button 0 up")
                         actions.sleep("{}ms".format(release_button_delay.get()))
-                        ctrl.mouse_click()
                         ctrl.mouse_click(button=left_mouse_button_index, up=True)
 
                     # print(str(ctrl.mouse_buttons_down()))

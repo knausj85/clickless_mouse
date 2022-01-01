@@ -105,6 +105,26 @@ prevent_redisplay_for_minor_motions = mod.setting(
     desc="A value of 1 or more prevents re-display for minor motions",
 )
 
+vertical_offset = mod.setting(
+    "clickless_mouse_vertical_offset",
+    type=float,
+    default=2.25,
+    desc="when drawing the options horizontally, this determines the vertical distance from the mouse. The total distance is the value times the radius.",
+)
+
+horizontal_offset = mod.setting(
+    "clickless_mouse_horizontal_offset",
+    type=float,
+    default=2.25,
+    desc="when drawing the options horizontally, this determines the distance between the options. The total distance is the value times the radius.",
+)
+
+stroke_width = mod.setting(
+    "clickless_mouse_stroke_width",
+    type=int,
+    default=3,
+    desc="The width the stroke for the cursor position.",
+)
 
 class dwell_button:
     def __init__(self, x, y, action="l"):
@@ -177,11 +197,31 @@ class clickless_mouse:
     def toggle(self):
         self.enable(not self.enabled)
 
-    def get_horizontal_button_positions(self):
+    def get_max_horizontal_distance(self):
+        return 2 * radius.get() * (len(self.get_horizontal_button_order()) + 1)
+
+    def get_horizontal_button_order(self):
         if auto_hide.get() >= 1:
             return horizontal_button_order_auto_hide_enabled
         else:
             return horizontal_button_order_auto_hide_disabled
+
+    def set_horizontal_button_positions(self, x, y, draw_right):
+        x_pos = None
+        for index, button_label in enumerate(
+            self.get_horizontal_button_order()
+        ):
+            if draw_right:
+                x_pos = x + math.ceil(radius.get() * (2.5 + horizontal_offset.get() * (index - 1)))
+            else:
+                x_pos = x - math.ceil(radius.get() * (2.5 + horizontal_offset.get() * (index - 1)))
+            self.button_positions.append(
+                dwell_button(
+                    x_pos,
+                    y,
+                    button_label if not self.is_left_down() else "lr",
+                )
+            )
 
     def set_button_positions(self):
         self.button_positions = []
@@ -197,228 +237,118 @@ class clickless_mouse:
         x_screen = self.x - self.screen.x
         y_screen = self.y - self.screen.y
 
-        # upper left corner
+        # top left corner
         if x_screen <= radius.get() * 3.5 and y_screen <= radius.get() * 3.25:
             # print("case 1")
 
-            y_pos = y + math.ceil(radius.get() * 3)
-            x_pos = None
-            for index, button_label in enumerate(
-                self.get_horizontal_button_positions()
-            ):
-                x_pos = x + math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
-                self.button_positions.append(
-                    dwell_button(
-                        x_pos,
-                        y_pos,
-                        button_label if not self.is_left_down() else "lr",
-                    )
-                )
-                # print("{},{}".format(x_pos, y_pos))
+            y_pos = y + math.ceil(radius.get() * vertical_offset.get())
+            self.set_horizontal_button_positions(x, y_pos, True)
 
             self.y_min = self.screen.y - 2 * radius.get()
             self.y_max = y + math.ceil(radius.get() * 5)
             self.x_min = self.screen.x - 2 * radius.get()
-            self.x_max = (
-                x + radius.get() * (len(self.get_horizontal_button_positions()) + 1) * 2
-            )
+            self.x_max = x + self.get_max_horizontal_distance()
 
-        # upper right corner
+        # top right corner
         elif (
             x_screen + radius.get() * 3.5 >= self.screen.width
             and y_screen <= radius.get() * 3.25
         ):
             # print("case 2")
-            y_pos = y + math.ceil(radius.get() * 3)
-            x_pos = None
-            for index, button_label in enumerate(
-                self.get_horizontal_button_positions()
-            ):
-                x_pos = x - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
-                self.button_positions.append(
-                    dwell_button(
-                        x_pos,
-                        y_pos,
-                        button_label if not self.is_left_down() else "lr",
-                    )
-                )
+            y_pos = y + math.ceil(radius.get() * vertical_offset.get())
+            self.set_horizontal_button_positions(x, y_pos, False)
 
             self.y_min = self.screen.y - 2 * radius.get()
             self.y_max = y + math.ceil(radius.get() * 5)
-            self.x_min = x - math.ceil(
-                radius.get() * (len(self.get_horizontal_button_positions()) + 1) * 2
-            )
-            self.x_max = x + math.ceil(radius.get() * 2)
+            self.x_min = x - self.get_max_horizontal_distance()
+            self.x_max = x + math.ceil(radius.get() * 2.25)
 
-        # lower left corner
+        # bottom left corner
         elif (
             x_screen <= radius.get() * 3.5
             and y_screen + radius.get() * 3.25 >= self.screen.height
         ):
             # print("case 3")
-            y_pos = y - math.ceil(radius.get() * 3)
-            x_pos = None
-            for index, button_label in enumerate(
-                self.get_horizontal_button_positions()
-            ):
-                x_pos = x + math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
-                self.button_positions.append(
-                    dwell_button(
-                        x_pos,
-                        y_pos,
-                        button_label if not self.is_left_down() else "lr",
-                    )
-                )
+            y_pos = y - math.ceil(radius.get() * vertical_offset.get())
+            self.set_horizontal_button_positions(x, y_pos, True)
 
             # todo: something better for the bounds
             self.y_min = y - math.ceil(radius.get() * 5)
             self.y_max = y + math.ceil(radius.get() * 4)
             self.x_min = x - math.ceil(radius.get() * 4)
-            self.x_max = x + math.ceil(
-                radius.get() * (len(self.get_horizontal_button_positions()) + 1) * 2
-            )
+            self.x_max = x + self.get_max_horizontal_distance()
 
-        # lower right corner
+        # bottom right corner
         elif (
             x_screen + radius.get() * 3.5 >= self.screen.width
             and y_screen + math.ceil(radius.get() * 3.25) >= self.screen.height
         ):
             # print("case 4")
             x_pos = None
-            y_pos = y - math.ceil(radius.get() * 3)
-            for index, button_label in enumerate(
-                self.get_horizontal_button_positions()
-            ):
-                x_pos = x - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
-                self.button_positions.append(
-                    dwell_button(
-                        x_pos,
-                        y_pos,
-                        button_label if not self.is_left_down() else "lr",
-                    )
-                )
+            y_pos = y - math.ceil(radius.get() * vertical_offset.get())
+            self.set_horizontal_button_positions(x, y_pos, False)
 
             self.y_min = y - math.ceil(radius.get() * 5)
             self.y_max = (
                 self.screen.y + self.screen.height + math.ceil(radius.get() * 4)
             )
-            self.x_min = x - math.ceil(
-                radius.get() * (len(self.get_horizontal_button_positions()) + 1) * 2
-            )
+            self.x_min = x - self.get_max_horizontal_distance()
             self.x_max = x + math.ceil(radius.get() * 4)
 
         # bottom edge, sufficient space to draw to the right
         elif (
             y_screen + math.ceil(radius.get() * 3.25) >= self.screen.height
             and x_screen
-            + math.ceil(radius.get() * len(self.get_horizontal_button_positions()) * 2)
+            + math.ceil(radius.get() * len(self.get_horizontal_button_order()) * 2)
             <= self.screen.width
         ):
             # print("case 5")
             x_pos = None
-            y_pos = y - math.ceil(radius.get() * 3)
-            for index, button_label in enumerate(
-                self.get_horizontal_button_positions()
-            ):
-                x_pos = x + math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
-                self.button_positions.append(
-                    dwell_button(
-                        x_pos,
-                        y_pos,
-                        button_label if not self.is_left_down() else "lr",
-                    )
-                )
-
+            y_pos = y - math.ceil(radius.get() * vertical_offset.get())
+            self.set_horizontal_button_positions(x, y_pos, True)
             self.y_min = y - math.ceil(radius.get() * 5)
             self.y_max = (
                 self.screen.y + self.screen.height + math.ceil(radius.get() * 4)
             )
             self.x_min = x - math.ceil(radius.get() * 4)
-            self.x_max = x + math.ceil(
-                radius.get() * (len(self.get_horizontal_button_positions()) + 1) * 2
-            )
+            self.x_max = x + self.get_max_horizontal_distance()
 
         # bottom edge, insufficient space to draw to the right
         elif (
             y_screen + math.ceil(radius.get() * 3.25) >= self.screen.height
             and x_screen
-            + math.ceil(radius.get() * len(self.get_horizontal_button_positions()) * 2)
+            + math.ceil(radius.get() * len(self.get_horizontal_button_order()) * 2)
             >= self.screen.width
         ):
             # print("case 6")
-            x_pos = None
-            y_pos = y - self.screen.y - math.ceil(radius.get() * 4)
-            for index, button_label in enumerate(
-                self.get_horizontal_button_positions()
-            ):
-                x_pos = (
-                    x
-                    - self.screen.x
-                    - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
-                )
-                self.button_positions.append(
-                    dwell_button(
-                        x_pos,
-                        y_pos,
-                        button_label if not self.is_left_down() else "lr",
-                    )
-                )
+            y_pos = y - self.screen.y - math.ceil(radius.get() * vertical_offset.get())
+            self.set_horizontal_button_positions(x, y_pos, False)
 
             self.y_min = y - math.ceil(radius.get() * 5)
             self.y_max = self.screen.height + math.ceil(radius.get() * 4)
-            self.x_min = x - math.ceil(
-                radius.get() * (len(self.get_horizontal_button_positions()) + 1) * 2
-            )
-            self.x_max = x + math.ceil(radius.get() * 2)
+            self.x_min = x - self.get_max_horizontal_distance()
+            self.x_max = x + math.ceil(radius.get() * 2.25)
 
         # left edge, not in corner
         elif x_screen <= radius.get() * 3.5:
             # print("case 7")
-
-            x_pos = None
-            y_pos = y + math.ceil(radius.get() * 3)
-            for index, button_label in enumerate(
-                self.get_horizontal_button_positions()
-            ):
-                x_pos = x + math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
-                self.button_positions.append(
-                    dwell_button(
-                        x_pos,
-                        y_pos,
-                        button_label if not self.is_left_down() else "lr",
-                    )
-                )
-
+            y_pos = y + math.ceil(radius.get() * vertical_offset.get())
+            self.set_horizontal_button_positions(x, y_pos, True)
             self.y_min = y - math.ceil(radius.get() * 4)
             self.y_max = y + math.ceil(radius.get() * 5)
-            self.x_min = x - math.ceil(radius.get() * 2)
-            self.x_max = x + math.ceil(
-                radius.get() * (len(self.get_horizontal_button_positions()) + 1) * 2
-            )
+            self.x_min = x - math.ceil(radius.get() * 2.25)
+            self.x_max = x + self.get_max_horizontal_distance()
 
         # right edge, not in corner
         elif x_screen + radius.get() * 3.5 >= self.screen.width:
             # print("case 8")
-            x_pos = None
-            y_pos = y + math.ceil(radius.get() * 3)
-            for index, button_label in enumerate(
-                self.get_horizontal_button_positions()
-            ):
-                x_pos = x - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
-                self.button_positions.append(
-                    dwell_button(
-                        x_pos,
-                        y_pos,
-                        button_label if not self.is_left_down() else "lr",
-                    )
-                )
+            y_pos = y + math.ceil(radius.get() * vertical_offset.get())
+            self.set_horizontal_button_positions(x, y_pos, False)
 
             self.y_min = y - math.ceil(radius.get() * 4)
             self.y_max = y + math.ceil(radius.get() * 5)
-            self.x_min = x - math.ceil(
-                radius.get() * (len(self.get_horizontal_button_positions()) + 1) * 2
-            )
-            self.x_max = x + math.ceil(radius.get() * 2)
+            self.x_min = x - self.get_max_horizontal_distance()
+            self.x_max = x + math.ceil(radius.get() * 2.25)
 
         # not along edges and not in corner
         # draw all around cursor
@@ -430,21 +360,21 @@ class clickless_mouse:
             self.button_positions.append(
                 dwell_button(
                     x - math.ceil(radius.get() * 2.25),
-                    y - math.ceil(radius.get() * 2),
+                    y - math.ceil(radius.get() * 2.25),
                     "su" if not self.is_left_down() else "lr",
                 )
             )
             self.button_positions.append(
                 dwell_button(
                     x + math.ceil(radius.get() * 2.25),
-                    y - math.ceil(radius.get() * 2),
+                    y - math.ceil(radius.get() * 2.25),
                     "sd" if not self.is_left_down() else "lr",
                 )
             )
             self.button_positions.append(
                 dwell_button(
                     x,
-                    y - math.ceil(radius.get() * 3.25),
+                    y - math.ceil(radius.get() * 2.25),
                     "lt" if not self.is_left_down() else "lr",
                 )
             )
@@ -459,7 +389,7 @@ class clickless_mouse:
             self.button_positions.append(
                 dwell_button(
                     x - math.ceil(radius.get() * 2.25),
-                    y + math.ceil(radius.get() * 2),
+                    y + math.ceil(radius.get() * 2.25),
                     "ld" if not self.is_left_down() else "lr",
                 )
             )
@@ -467,7 +397,7 @@ class clickless_mouse:
             self.button_positions.append(
                 dwell_button(
                     x,
-                    y + math.ceil(radius.get() * 3.25),
+                    y + math.ceil(radius.get() * 2.25),
                     "l" if not self.is_left_down() else "lr",
                 )
             )
@@ -475,7 +405,7 @@ class clickless_mouse:
             self.button_positions.append(
                 dwell_button(
                     x + math.ceil(radius.get() * 2.25),
-                    y + math.ceil(radius.get() * 2),
+                    y + math.ceil(radius.get() * 2.25),
                     "r" if not self.is_left_down() else "lr",
                 )
             )
@@ -495,14 +425,14 @@ class clickless_mouse:
             y_screen <= radius.get() * 3.25
             and x_screen + radius.get() * 3.5 <= self.screen.width
             and x_screen
-            + math.ceil(radius.get() * len(self.get_horizontal_button_positions()) * 2)
+            + math.ceil(radius.get() * len(self.get_horizontal_button_order()) * 2)
             <= self.screen.width
         ):
             # print("case 10")
             x_pos = None
-            y_pos = y + math.ceil(radius.get() * 3)
+            y_pos = y + math.ceil(radius.get() * vertical_offset.get())
             for index, button_label in enumerate(
-                self.get_horizontal_button_positions()
+                self.get_horizontal_button_order()
             ):
                 x_pos = x + math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
                 self.button_positions.append(
@@ -515,10 +445,8 @@ class clickless_mouse:
 
             self.y_min = y - math.ceil(radius.get() * 4)
             self.y_max = y + math.ceil(radius.get() * 5)
-            self.x_min = x - math.ceil(radius.get() * 2)
-            self.x_max = x + math.ceil(
-                radius.get() * (len(self.get_horizontal_button_positions()) + 1) * 2
-            )
+            self.x_min = x - math.ceil(radius.get() * 2.25)
+            self.x_max = x + self.get_max_horizontal_distance()
 
         # top edge, insufficient space to the right
         elif (
@@ -526,59 +454,19 @@ class clickless_mouse:
             and (
                 x_screen
                 + math.ceil(
-                    radius.get() * len(self.get_horizontal_button_positions()) * 2
+                    radius.get() * len(self.get_horizontal_button_order()) * 2
                 )
                 >= self.screen.width
             )
             and y_screen <= radius.get() * 3.25
         ):
             # print("case 11")
-            x_pos = None
-            y_pos = y + math.ceil(radius.get() * 3)
-            for index, button_label in enumerate(
-                self.get_horizontal_button_positions()
-            ):
-                x_pos = x - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
-                self.button_positions.append(
-                    dwell_button(
-                        x_pos,
-                        y_pos,
-                        button_label,
-                    )
-                )
-
+            y_pos = y + math.ceil(radius.get() * vertical_offset.get())
+            self.set_horizontal_button_positions(x, y_pos, False)
             self.y_min = y - math.ceil(radius.get() * 4)
             self.y_max = y + math.ceil(radius.get() * 5)
-            self.x_min = x - math.ceil(
-                radius.get() * (len(self.get_horizontal_button_positions()) + 1) * 2
-            )
-            self.x_max = x + math.ceil(radius.get() * 2)
-        # top edge, insufficient space to the right
-        elif (
-            x_screen + radius.get() * 3.5 >= self.screen.width
-            and y_screen <= radius.get() * 3.25
-        ):
-            # print("case 12")
-            x_pos = None
-            y_pos = y + math.ceil(radius.get() * 3)
-            for index, button_label in enumerate(
-                self.get_horizontal_button_positions()
-            ):
-                x_pos = x - math.ceil(radius.get() * (2.5 + 2.25 * (index - 1)))
-                self.button_positions.append(
-                    dwell_button(
-                        x_pos,
-                        y_pos,
-                        button_label,
-                    )
-                )
-
-            self.y_min = y - math.ceil(radius.get() * 5)
-            self.y_max = y + math.ceil(radius.get() * 5)
-            self.x_min = x - math.ceil(
-                radius.get() * (len(self.get_horizontal_button_positions()) + 1) * 2
-            )
-            self.x_max = x + math.ceil(radius.get() * 2)
+            self.x_min = x - self.get_max_horizontal_distance()
+            self.x_max = x + math.ceil(radius.get() * 2.25)
         else:
             print("not handled: {},{}".format(x, y))
 
@@ -756,10 +644,11 @@ class clickless_mouse:
         x = self.x
         y = self.y
         paint = canvas.paint
-        paint.color = "ff0000"
+        paint.color = "ff0000dd"
         paint.style = paint.Style.FILL
         # print("{},{}".format(self.x, self.y))
         # print(canvas.rect)
+        paint.stroke_width = stroke_width.get()
         canvas.draw_line(x - radius.get(), y, x + radius.get(), y)
         canvas.draw_line(x, y - radius.get(), x, y + radius.get())
 
@@ -771,7 +660,6 @@ class clickless_mouse:
 
             # draw inner circle
             paint.color = "000000AA"
-            paint.style = paint.Style.STROKE
             paint.style = paint.Style.FILL
             canvas.draw_circle(b.x, b.y, radius.get())
 

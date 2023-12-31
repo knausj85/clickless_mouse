@@ -642,6 +642,11 @@ class Actions:
     def clickless_mouse_disable():
         """Toggles the click less mouse"""
         cm.enable(False)
+    
+    def clickless_mouse_is_enabled():
+        """Returns whether or not the click less mouse is enabled"""
+        return cm.enabled
+        
 
 
 # uncomment the following for quick testing

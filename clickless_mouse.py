@@ -45,7 +45,7 @@ right_mouse_button_index = 1
 
 mod = Module()
 ctx = Context()
-mod.mode("clickless_mouse_enabled", desc="Indicates the clickless mouse is enabled")
+mod.tag("clickless_mouse_enabled", desc="Indicates the clickless mouse is enabled")
 
 STATE_MOUSE_IDLE = 0
 STATE_MOUSE_MOVING = 1
@@ -174,9 +174,9 @@ class clickless_mouse:
         self.enabled = _enable
 
         if self.enabled:
-            actions.mode.enable("user.clickless_mouse_enabled")
+            ctx.tags = ["user.clickless_mouse_enabled"]
         else:
-            actions.mode.disable("user.clickless_mouse_enabled")
+            ctx.tags = []
 
         if self.enabled:
             self.x, self.y = ctrl.mouse_pos()

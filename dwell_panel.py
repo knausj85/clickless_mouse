@@ -278,5 +278,21 @@ class dwell_panel:
                 )
             )
 
+    def clear_button_positions(self):
+        self.button_positions = []
+
     def is_outside_panel(self, x, y):
         return x > self.x_max or x < self.x_min or y > self.y_max or y < self.y_min
+
+    def find_hit(self, x, y, now):
+        item_hit = None
+        for b in self.button_positions:
+            if (x <= b.x + settings.get("user.clickless_mouse_radius") and b.x - settings.get("user.clickless_mouse_radius") <= x) and (
+                y <= b.y + settings.get("user.clickless_mouse_radius") and b.y - settings.get("user.clickless_mouse_radius") <= y
+            ):
+                b.hit_check(True)
+                self.last_time = now
+                item_hit = b
+            else:
+                b.hit_check(False)
+        return item_hit

@@ -187,20 +187,11 @@ class clickless_mouse:
             else:
                 self.x, self.y = ctrl.mouse_pos()
                 self.state = STATE_MOUSE_MOVING
-                self.dwell_panel.button_positions = []
+                self.dwell_panel.clear_button_positions()
         elif self.state == STATE_DISPLAYING_OPTIONS:
             # print("display")
-            item_hit = None
             draw_options = True
-            for b in self.dwell_panel.button_positions:
-                if (x <= b.x + settings.get("user.clickless_mouse_radius") and b.x - settings.get("user.clickless_mouse_radius") <= x) and (
-                    y <= b.y + settings.get("user.clickless_mouse_radius") and b.y - settings.get("user.clickless_mouse_radius") <= y
-                ):
-                    b.hit_check(True)
-                    self.last_time = now
-                    item_hit = b
-                else:
-                    b.hit_check(False)
+            item_hit = self.dwell_panel.find_hit(x, y, now)
 
             if (
                 settings.get("user.clickless_mouse_auto_hide") >= 1

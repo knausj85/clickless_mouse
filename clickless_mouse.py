@@ -197,75 +197,7 @@ class clickless_mouse:
                 draw_options = False
 
             elif item_hit and now - item_hit.last_hit_time >= settings.get("user.clickless_mouse_dwell_time"):
-                draw_options = False
-
-                # print("performing action...")
-                action = item_hit.action
-                if (
-                    action != "su"
-                    and action != "sd"
-                    and action != "ka"
-                    and action != "x"
-                ):
-                    self.suppress_next_update = True
-                    ctrl.mouse_move(self.x, self.y)
-
-                if item_hit.action == "lh":
-                    # print("left hold")
-                    if not self.is_left_down():
-                        # print("pressing button 0 down")
-                        ctrl.mouse_click(button=left_mouse_button_index, down=True)
-                    else:
-                        # print("pressing button 0 up")
-                        actions.sleep("{}ms".format(settings.get("user.clickless_mouse_release_delay")))
-                        ctrl.mouse_click(button=left_mouse_button_index, up=True)
-
-                    # print(str(ctrl.mouse_buttons_down()))
-                elif item_hit.action == "lr":
-                    if self.is_left_down():
-                        actions.sleep("{}ms".format(settings.get("user.clickless_mouse_release_delay")))
-                        ctrl.mouse_click(button=left_mouse_button_index, up=True)
-
-                elif item_hit.action == "l":
-                    ctrl.mouse_click(button=left_mouse_button_index)
-
-                elif item_hit.action == "ld":
-                    ctrl.mouse_click(button=left_mouse_button_index)
-                    ctrl.mouse_click(button=left_mouse_button_index)
-
-                elif item_hit.action == "lt":
-                    ctrl.mouse_click(button=left_mouse_button_index)
-                    ctrl.mouse_click(button=left_mouse_button_index)
-                    ctrl.mouse_click(button=left_mouse_button_index)
-
-                elif item_hit.action == "r":
-                    ctrl.mouse_click(button=right_mouse_button_index)
-
-                elif item_hit.action == "rh":
-                    if right_mouse_button_index not in ctrl.mouse_buttons_down():
-                        ctrl.mouse_click(button=right_mouse_button_index, down=True)
-                    else:
-                        actions.sleep("{}ms".format(settings.get("user.clickless_mouse_release_delay")))
-                        ctrl.mouse_click(button=right_mouse_button_index, up=True)
-                elif item_hit.action == "su":
-                    actions.mouse_scroll(y=-10)
-                    draw_options = True
-
-                elif item_hit.action == "sd":
-                    actions.mouse_scroll(y=10)
-                    draw_options = True
-                elif item_hit.action == "ka":
-                    draw_options = True
-                elif item_hit.action == "x":
-                    draw_options = False
-                    self.x, self.y = ctrl.mouse_pos()
-                    self.state = STATE_MOUSE_IDLE
-
-                if action != "su" and action != "sd" and action != "ka":
-                    # print("({},{})".format(self.x, self.y))
-                    self.x, self.y = ctrl.mouse_pos()
-                    # print("({},{})".format(self.x, self.y))
-                    self.state = STATE_MOUSE_IDLE
+                draw_options = self.handle_action(item_hit)
 
             elif self.dwell_panel.is_outside_panel(x, y):
                 draw_options = False
@@ -281,7 +213,75 @@ class clickless_mouse:
             else:
                 self.dwell_panel.unregister_canvas()
 
+    def handle_action(self, item_hit):
 
+        # print("performing action...")
+        action = item_hit.action
+        if (
+            action != "su"
+            and action != "sd"
+            and action != "ka"
+            and action != "x"
+        ):
+            self.suppress_next_update = True
+            ctrl.mouse_move(self.x, self.y)
+
+        if item_hit.action == "lh":
+            # print("left hold")
+            if not self.is_left_down():
+                # print("pressing button 0 down")
+                ctrl.mouse_click(button=left_mouse_button_index, down=True)
+            else:
+                # print("pressing button 0 up")
+                actions.sleep("{}ms".format(settings.get("user.clickless_mouse_release_delay")))
+                ctrl.mouse_click(button=left_mouse_button_index, up=True)
+
+            # print(str(ctrl.mouse_buttons_down()))
+        elif item_hit.action == "lr":
+            if self.is_left_down():
+                actions.sleep("{}ms".format(settings.get("user.clickless_mouse_release_delay")))
+                ctrl.mouse_click(button=left_mouse_button_index, up=True)
+
+        elif item_hit.action == "l":
+            ctrl.mouse_click(button=left_mouse_button_index)
+
+        elif item_hit.action == "ld":
+            ctrl.mouse_click(button=left_mouse_button_index)
+            ctrl.mouse_click(button=left_mouse_button_index)
+
+        elif item_hit.action == "lt":
+            ctrl.mouse_click(button=left_mouse_button_index)
+            ctrl.mouse_click(button=left_mouse_button_index)
+            ctrl.mouse_click(button=left_mouse_button_index)
+
+        elif item_hit.action == "r":
+            ctrl.mouse_click(button=right_mouse_button_index)
+
+        elif item_hit.action == "rh":
+            if right_mouse_button_index not in ctrl.mouse_buttons_down():
+                ctrl.mouse_click(button=right_mouse_button_index, down=True)
+            else:
+                actions.sleep("{}ms".format(settings.get("user.clickless_mouse_release_delay")))
+                ctrl.mouse_click(button=right_mouse_button_index, up=True)
+        elif item_hit.action == "su":
+            actions.mouse_scroll(y=-10)
+            draw_options = True
+
+        elif item_hit.action == "sd":
+            actions.mouse_scroll(y=10)
+            draw_options = True
+        elif item_hit.action == "ka":
+            draw_options = True
+        elif item_hit.action == "x":
+            draw_options = False
+            self.x, self.y = ctrl.mouse_pos()
+            self.state = STATE_MOUSE_IDLE
+
+        if action != "su" and action != "sd" and action != "ka":
+            # print("({},{})".format(self.x, self.y))
+            self.x, self.y = ctrl.mouse_pos()
+            # print("({},{})".format(self.x, self.y))
+            self.state = STATE_MOUSE_IDLE
 
 cm = clickless_mouse()
 

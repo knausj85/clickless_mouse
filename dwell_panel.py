@@ -40,8 +40,6 @@ right_mouse_button_index = 1
 class dwell_panel:
     def __init__(self):
         self.button_positions = []
-        self.x, self.y = ctrl.mouse_pos()
-        self._dwell_x, self._dwell_y = self.x, self.y
         self.screen = None
         self.mcanvas = None
         self.draw_registered = False
@@ -80,17 +78,10 @@ class dwell_panel:
 
     def set_button_positions(self, x, y, is_left_down):
         self.button_positions = []
-        self.x, self.y = x, y
-
-        self._dwell_x, self._dwell_y = self.x, self.y
-
-        # alias the cursor position for convenience
-        x = self.x
-        y = self.y
 
         # calculate the screen coordinates
-        x_screen = self.x - self.screen.x
-        y_screen = self.y - self.screen.y
+        x_screen = x - self.screen.x
+        y_screen = y - self.screen.y
 
         # top left corner
         if x_screen <= settings.get("user.clickless_mouse_radius") * 3.5 and y_screen <= settings.get("user.clickless_mouse_radius") * 3.25:
@@ -299,7 +290,7 @@ class dwell_panel:
                 self.mcanvas.close()
                 self.mcanvas = None
             self.mcanvas = canvas.Canvas.from_screen(self.screen)
-        # self.x, self.y = x, y
+
         self.set_button_positions(x, y, is_left_down)
 
     def clear_button_positions(self):

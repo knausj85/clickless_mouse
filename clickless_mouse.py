@@ -182,7 +182,7 @@ class clickless_mouse:
                             self.dwell_panel.mcanvas = None
                         self.dwell_panel.mcanvas = canvas.Canvas.from_screen(self.dwell_panel.screen)
                     self.x, self.y = ctrl.mouse_pos()
-                    self.dwell_panel.set_button_positions()
+                    self.dwell_panel.set_button_positions(self.x, self.y, self.is_left_down())
                     self.state = STATE_DISPLAYING_OPTIONS
             else:
                 self.x, self.y = ctrl.mouse_pos()

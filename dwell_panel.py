@@ -322,9 +322,15 @@ class dwell_panel:
         return item_hit
 
     def draw(self, canvas):
-        self.draw_options(canvas, self.panel_x, self.panel_y)
+        self.draw_panel(canvas, self.panel_x, self.panel_y)
 
-    def draw_options(self, canvas, x, y):
+    def draw_panel(self, canvas, x, y):
+        self.draw_cross(canvas, x, y)
+
+        for b in self.button_positions:
+            self.draw_button(canvas, b)
+
+    def draw_cross(self, canvas, x, y):
         paint = canvas.paint
         paint.color = "ff0000dd"
         paint.style = paint.Style.FILL
@@ -334,35 +340,37 @@ class dwell_panel:
         canvas.draw_line(x - settings.get("user.clickless_mouse_radius"), y, x + settings.get("user.clickless_mouse_radius"), y)
         canvas.draw_line(x, y - settings.get("user.clickless_mouse_radius"), x, y + settings.get("user.clickless_mouse_radius"))
 
-        for b in self.button_positions:
-            # draw outer circle
-            paint.color = "ffffffaa"
-            paint.style = paint.Style.STROKE
-            canvas.draw_circle(b.x, b.y, settings.get("user.clickless_mouse_radius") + 1)
+    def draw_button(self, canvas, b):
+        paint = canvas.paint
+        # draw outer circle
+        paint.color = "ffffffaa"
+        paint.style = paint.Style.STROKE
+        canvas.draw_circle(b.x, b.y, settings.get("user.clickless_mouse_radius") + 1)
 
-            # draw inner circle
-            paint.color = "000000AA"
+        # draw inner circle
+        paint.color = "000000AA"
+        paint.style = paint.Style.FILL
+        canvas.draw_circle(b.x, b.y, settings.get("user.clickless_mouse_radius"))
+
+        # draw hit circle
+        if b.last_hit_time:
+            paint.color = "00FF00"
             paint.style = paint.Style.FILL
-            canvas.draw_circle(b.x, b.y, settings.get("user.clickless_mouse_radius"))
 
-            # draw hit circle
-            if b.last_hit_time:
-                paint.color = "00FF00"
-                paint.style = paint.Style.FILL
+            _radius = min(
+                math.ceil(
+                    settings.get("user.clickless_mouse_radius")
+                    * (time.perf_counter() - b.last_hit_time)
+                    / settings.get("user.clickless_mouse_dwell_time")
+                ),
+                settings.get("user.clickless_mouse_radius"),
+            )
+            canvas.draw_circle(b.x, b.y, _radius)
 
-                _radius = min(
-                    math.ceil(
-                        settings.get("user.clickless_mouse_radius")
-                        * (time.perf_counter() - b.last_hit_time)
-                        / settings.get("user.clickless_mouse_dwell_time")
-                    ),
-                    settings.get("user.clickless_mouse_radius"),
-                )
-                canvas.draw_circle(b.x, b.y, _radius)
+        canvas.paint.text_align = canvas.paint.TextAlign.CENTER
+        text_string = b.action
+        paint.textsize = settings.get("user.clickless_mouse_radius")
+        paint.color = "ffffffff"
 
-            canvas.paint.text_align = canvas.paint.TextAlign.CENTER
-            text_string = b.action
-            paint.textsize = settings.get("user.clickless_mouse_radius")
-            paint.color = "ffffffff"
+        canvas.draw_text(text_string, b.x, b.y)
 
-            canvas.draw_text(text_string, b.x, b.y)

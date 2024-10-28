@@ -1,5 +1,5 @@
 import time
-from talon import Module, Context, app, canvas, screen, ui, ctrl, cron, actions, settings
+from talon import canvas, screen, ui, ctrl, settings
 from .dwell_button import dwell_button
 import math
 
@@ -42,10 +42,11 @@ class dwell_panel:
         self.button_positions = []
         self.x, self.y = ctrl.mouse_pos()
         self._dwell_x, self._dwell_y = self.x, self.y
-        self.button_positions = []
         self.screen = None
         self.mcanvas = None
         self.draw_registered = False
+        self.panel_x, self.panel_y = None, None
+
 
         # the bounds around the displayed options. if you go outside, options
         # are hidden
@@ -53,7 +54,7 @@ class dwell_panel:
 
     def unregister_and_close_canvas(self):
         if self.draw_registered:
-            # self.mcanvas.unregister("draw", self.draw)
+            self.mcanvas.unregister("draw", self.draw)
             self.mcanvas.close()
             self.mcanvas = None
             self.draw_registered = False
@@ -287,6 +288,7 @@ class dwell_panel:
             )
 
     def create_panel(self, x, y, is_left_down):
+        self.panel_x, self.panel_y = x, y
         screen = ui.screen_containing(x, y)
 
         # if the screen is cached, it won't always appear over
@@ -318,6 +320,9 @@ class dwell_panel:
             else:
                 b.hit_check(False)
         return item_hit
+
+    def draw(self, canvas):
+        self.draw_options(canvas, self.panel_x, self.panel_y)
 
     def draw_options(self, canvas, x, y):
         paint = canvas.paint

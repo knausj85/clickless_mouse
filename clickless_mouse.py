@@ -5,8 +5,7 @@
 #  (3) detect non-clickless mouse events to dismiss
 #  (4) better handling of mixed resolutions - 4k + non-4k etc
 #  (5) Clicking some contexts menus (e.g. run as admin) in the start menu requires a double click???
-from talon import Module, Context, app, canvas, screen, ui, ctrl, cron, actions, settings
-from .dwell_button import dwell_button
+from talon import Module, Context, app, ctrl, cron, actions, settings
 from .dwell_panel import dwell_panel
 
 import math, time
@@ -132,9 +131,7 @@ class clickless_mouse:
             cron.cancel(self.update_cron)
             self.update_cron = None
             self.state = STATE_MOUSE_IDLE
-            if self.dwell_panel.draw_registered:
-                self.dwell_panel.mcanvas.unregister("draw", self.draw)
-                self.dwell_panel.unregister_and_close_canvas()
+            self.dwell_panel.unregister_and_close_canvas()
 
     def toggle(self):
         self.enable(not self.enabled)
@@ -280,14 +277,10 @@ class clickless_mouse:
                     self._dwell_x, self._dwell_y = ctrl.mouse_pos()
 
                 if not self.dwell_panel.draw_registered:
-                    self.dwell_panel.mcanvas.register("draw", self.draw)
-                    self.dwell_panel.draw_registered = True
-            elif self.dwell_panel.draw_registered:
-                self.dwell_panel.mcanvas.unregister("draw", self.draw)
-                self.dwell_panel.draw_registered = False
+                    self.dwell_panel.register_canvas()
+            else:
+                self.dwell_panel.unregister_canvas()
 
-    def draw(self, canvas):
-        self.dwell_panel.draw_options(canvas, self.x, self.y)
 
 
 cm = clickless_mouse()

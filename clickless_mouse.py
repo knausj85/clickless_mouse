@@ -133,7 +133,7 @@ class clickless_mouse:
             self.update_cron = None
             self.state = STATE_MOUSE_IDLE
             if self.dwell_panel.draw_registered:
-                self.dwell_panel.mcanvas.unregister("draw", self.draw)
+                self.dwell_panel.mcanvas.unregister_and_close_canvas("draw", self.draw)
                 self.dwell_panel.unregister_canvas()
 
     def toggle(self):
@@ -296,52 +296,7 @@ class clickless_mouse:
                 self.dwell_panel.draw_registered = False
 
     def draw(self, canvas):
-        self.draw_options(canvas)
-
-    def draw_options(self, canvas):
-        x = self.x
-        y = self.y
-        paint = canvas.paint
-        paint.color = "ff0000dd"
-        paint.style = paint.Style.FILL
-        # print("{},{}".format(self.x, self.y))
-        # print(canvas.rect)
-        paint.stroke_width = settings.get("user.clickless_mouse_stroke_width")
-        canvas.draw_line(x - settings.get("user.clickless_mouse_radius"), y, x + settings.get("user.clickless_mouse_radius"), y)
-        canvas.draw_line(x, y - settings.get("user.clickless_mouse_radius"), x, y + settings.get("user.clickless_mouse_radius"))
-
-        for b in self.dwell_panel.button_positions:
-            # draw outer circle
-            paint.color = "ffffffaa"
-            paint.style = paint.Style.STROKE
-            canvas.draw_circle(b.x, b.y, settings.get("user.clickless_mouse_radius") + 1)
-
-            # draw inner circle
-            paint.color = "000000AA"
-            paint.style = paint.Style.FILL
-            canvas.draw_circle(b.x, b.y, settings.get("user.clickless_mouse_radius"))
-
-            # draw hit circle
-            if b.last_hit_time:
-                paint.color = "00FF00"
-                paint.style = paint.Style.FILL
-
-                _radius = min(
-                    math.ceil(
-                        settings.get("user.clickless_mouse_radius")
-                        * (time.perf_counter() - b.last_hit_time)
-                        / settings.get("user.clickless_mouse_dwell_time")
-                    ),
-                    settings.get("user.clickless_mouse_radius"),
-                )
-                canvas.draw_circle(b.x, b.y, _radius)
-
-            canvas.paint.text_align = canvas.paint.TextAlign.CENTER
-            text_string = b.action
-            paint.textsize = settings.get("user.clickless_mouse_radius")
-            paint.color = "ffffffff"
-
-            canvas.draw_text(text_string, b.x, b.y)
+        self.dwell_panel.draw_options(canvas, self.x, self.y)
 
 
 cm = clickless_mouse()

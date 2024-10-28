@@ -133,8 +133,8 @@ class clickless_mouse:
             self.update_cron = None
             self.state = STATE_MOUSE_IDLE
             if self.dwell_panel.draw_registered:
-                self.dwell_panel.mcanvas.unregister_and_close_canvas("draw", self.draw)
-                self.dwell_panel.unregister_canvas()
+                self.dwell_panel.mcanvas.unregister("draw", self.draw)
+                self.dwell_panel.unregister_and_close_canvas()
 
     def toggle(self):
         self.enable(not self.enabled)
@@ -171,18 +171,9 @@ class clickless_mouse:
                 if now - self.last_time >= settings.get("user.clickless_mouse_auto_hide_time"):
                     self.last_time = now
                     self._dwell_x, self._dwell_y = ctrl.mouse_pos()
-                    screen = ui.screen_containing(self.x, self.y)
-
-                    # if the screen is cached, it won't always appear over
-                    # certain windows
-                    if True:  # screen != self.screen:
-                        self.dwell_panel.screen = screen
-                        if self.dwell_panel.mcanvas:
-                            self.dwell_panel.mcanvas.close()
-                            self.dwell_panel.mcanvas = None
-                        self.dwell_panel.mcanvas = canvas.Canvas.from_screen(self.dwell_panel.screen)
                     self.x, self.y = ctrl.mouse_pos()
-                    self.dwell_panel.set_button_positions(self.x, self.y, self.is_left_down())
+                    self.dwell_panel.create_panel(self.x, self.y, self.is_left_down())
+
                     self.state = STATE_DISPLAYING_OPTIONS
             else:
                 self.x, self.y = ctrl.mouse_pos()

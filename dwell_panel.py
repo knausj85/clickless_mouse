@@ -286,6 +286,20 @@ class dwell_panel:
                 )
             )
 
+    def create_panel(self, x, y, is_left_down):
+        screen = ui.screen_containing(x, y)
+
+        # if the screen is cached, it won't always appear over
+        # certain windows
+        if True:  # screen != self.screen:
+            self.screen = screen
+            if self.mcanvas:
+                self.mcanvas.close()
+                self.mcanvas = None
+            self.mcanvas = canvas.Canvas.from_screen(self.screen)
+        # self.x, self.y = x, y
+        self.set_button_positions(x, y, is_left_down)
+
     def clear_button_positions(self):
         self.button_positions = []
 

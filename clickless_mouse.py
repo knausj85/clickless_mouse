@@ -203,11 +203,11 @@ class Actions:
         cm.toggle()
 
     def clickless_mouse_enable():
-        """Toggles the click less mouse"""
+        """Enables the click less mouse"""
         cm.enable(True)
 
     def clickless_mouse_disable():
-        """Toggles the click less mouse"""
+        """Disable the click less mouse"""
         cm.enable(False)
     
     def clickless_mouse_next_standstill_action(action: str):

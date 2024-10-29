@@ -34,9 +34,6 @@ horizontal_button_order_auto_hide_disabled = [
     "x",
 ]
 
-left_mouse_button_index = 0
-right_mouse_button_index = 1
-
 class dwell_panel:
     def __init__(self):
         self.button_positions = []

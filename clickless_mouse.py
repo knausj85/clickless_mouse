@@ -5,17 +5,25 @@
 #  (3) detect non-clickless mouse events to dismiss
 #  (4) better handling of mixed resolutions - 4k + non-4k etc
 #  (5) Clicking some contexts menus (e.g. run as admin) in the start menu requires a double click???
-from talon import Module, Context, app, ctrl, cron, actions, settings
+from talon import Module, Context, app, ctrl, cron, settings
 from .two_stage_clicker import two_stage_clicker
-from .dwell_panel import dwell_panel
+from .single_stage_clicker import single_stage_clicker
 from .constants import *
 
 import math, time
 
 
+
 mod = Module()
 ctx = Context()
 mod.tag("clickless_mouse_enabled", desc="Indicates the clickless mouse is enabled")
+
+clickless_method = mod.setting(
+    "clickless_mouse_method",
+    type=str,
+    default="two_stage",
+    desc="Either 'single_stage' or 'two_stage'",
+)
 
 dwell_time = mod.setting(
     "clickless_mouse_dwell_time",
@@ -97,8 +105,7 @@ class clickless_mouse:
         self.last_time = 0
         self.enabled = False
         self.update_cron = None
-        self.dwell_panel = dwell_panel()
-        self.clicker = two_stage_clicker(self.dwell_panel)
+        self.clicker = None
 
         # after moving the mouse to perform an action,
         # avoid a state change in the first update.
@@ -120,6 +127,7 @@ class clickless_mouse:
             ctx.tags = []
 
         if self.enabled:
+            self.clicker = self.create_clicker()
             self.x, self.y = ctrl.mouse_pos()
             self.update_cron = cron.interval("16ms", self.update)
         elif self.update_cron:
@@ -128,6 +136,14 @@ class clickless_mouse:
             self.state = STATE_MOUSE_IDLE
             self.clicker.on_disable()
 
+    def create_clicker(self):
+        match settings.get("user.clickless_mouse_method"):
+            case "single_stage":
+                clicker = single_stage_clicker()
+            case _:
+                clicker = two_stage_clicker()
+        return clicker
+    
     def toggle(self):
         self.enable(not self.enabled)
 
@@ -158,7 +174,7 @@ class clickless_mouse:
             # print("stopped")
 
             if x == self.x and y == self.y:
-                if now - self.last_time >= settings.get("user.clickless_mouse_auto_hide_time"):
+                if now - self.last_time >= self.clicker.standstill_delay():
                     self.last_time = now
                     # self._dwell_x, self._dwell_y = ctrl.mouse_pos()
                     update_last_xy = True

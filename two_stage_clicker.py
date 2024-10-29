@@ -2,16 +2,20 @@ import time
 from talon import Module, Context, app, ctrl, cron, actions, settings
 from .clicker_base import clicker_base, on_panel_display_result
 from .constants import *
+from .dwell_panel import dwell_panel
 
 class two_stage_clicker(clicker_base):
-    def __init__(self, dwell_panel):
-        self.dwell_panel = dwell_panel
+    def __init__(self):
         self._dwell_x = self._dwell_y = None
         self.crosshair_x = self.crosshair_y = None
+        self.dwell_panel = dwell_panel()
 
     def on_disable(self):
         self.dwell_panel.unregister_and_close_canvas()
 
+    def standstill_delay(self) -> int:
+        return settings.get("user.clickless_mouse_auto_hide_time")
+    
     def on_standstill(self, x, y, is_left_down) -> int:
         self._dwell_x, self._dwell_y = x, y
         self.crosshair_x, self.crosshair_y = x, y

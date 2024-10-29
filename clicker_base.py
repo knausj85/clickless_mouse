@@ -13,6 +13,10 @@ class clicker_base(ABC):
     def on_disable(self):
         pass
 
+    def standstill_delay(self) -> int:
+        """delay after mouse stops moving before on_standstill is called"""
+        pass
+
     def on_standstill(self, x, y, is_left_down) -> int:
         """called when the mouse has stopped for the user defined duration"""
         pass

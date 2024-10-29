@@ -1,5 +1,14 @@
 -
 settings():
+    ### clicker method
+    # either "single_stage" or "two_stage"
+    user.clickless_mouse_method = "two_stage"
+
+    ### single stage clicker options
+    # see option below: user.clickless_mouse_dwell_time
+
+    ### two stage clicker options
+    
     # size of the options
     user.clickless_mouse_radius = 25
     # the time required to dwell on an option before its triggered

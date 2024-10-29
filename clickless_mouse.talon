@@ -24,3 +24,8 @@ settings():
     user.clickless_mouse_prevent_redisplay_for_minor_motions = 0
 
 ^click less mouse$: user.clickless_mouse_toggle()
+
+# command specific to single_stage
+^click less left [click]$: user.clickless_mouse_next_standstill_action("left_click")
+^click less right [click]$: user.clickless_mouse_next_standstill_action("right_click")
+^click less hover$: user.clickless_mouse_next_standstill_action("hover")

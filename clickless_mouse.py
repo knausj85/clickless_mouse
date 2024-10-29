@@ -210,6 +210,10 @@ class Actions:
         """Toggles the click less mouse"""
         cm.enable(False)
     
+    def clickless_mouse_next_standstill_action(action: str):
+        """With the single-stage method, this sets the next standstill action"""
+        cm.clicker.set_next_standstill_action(action)
+
     def clickless_mouse_is_enabled():
         """Returns whether or not the click less mouse is enabled"""
         return cm.enabled

@@ -8,6 +8,7 @@
 from talon import Module, Context, app, ctrl, cron, settings
 from .two_stage_clicker import two_stage_clicker
 from .single_stage_clicker import single_stage_clicker
+from .mouse_state_analyzer import mouse_state_analyzer
 from .constants import *
 
 import math, time
@@ -99,18 +100,11 @@ stroke_width = mod.setting(
 
 class clickless_mouse:
     def __init__(self):
-        self.x, self.y = ctrl.mouse_pos()
-        self._dwell_x, self._dwell_y = ctrl.mouse_pos()
         self.state = STATE_MOUSE_IDLE
-        self.last_time = 0
         self.enabled = False
         self.update_cron = None
         self.clicker = None
-
-        # after moving the mouse to perform an action,
-        # avoid a state change in the first update.
-        # this prevents an unnecessary re-display
-        self.suppress_next_update = False
+        self.mouse_state_analyzer = mouse_state_analyzer()
 
     def is_left_down(self):
         return left_mouse_button_index in ctrl.mouse_buttons_down()
@@ -128,13 +122,16 @@ class clickless_mouse:
 
         if self.enabled:
             self.clicker = self.create_clicker()
-            self.x, self.y = ctrl.mouse_pos()
+            self.mouse_state_analyzer.set_standstill_delay(self.clicker.standstill_delay())
+            self.mouse_state_analyzer.enable()
             self.update_cron = cron.interval("16ms", self.update)
+            
         elif self.update_cron:
             cron.cancel(self.update_cron)
             self.update_cron = None
             self.state = STATE_MOUSE_IDLE
             self.clicker.on_disable()
+
 
     def create_clicker(self):
         match settings.get("user.clickless_mouse_method"):
@@ -149,49 +146,28 @@ class clickless_mouse:
 
     def update(self):
         # print("update")
-        x, y = ctrl.mouse_pos()
-        now = time.perf_counter()
-        update_last_xy = False
-        # print("({},{})".format(x, y))
-        if self.state == STATE_MOUSE_IDLE:
-            # print("idle")
-            if self.suppress_next_update:
-                self.suppress_next_update = False
-                update_last_xy = True
-            elif math.fabs(self.x - x) > 1 or math.fabs(self.y - y) > 1:
-                update_last_xy = True
-                self.state = STATE_MOUSE_MOVING
+        analyzer = self.mouse_state_analyzer
 
-        elif self.state == STATE_MOUSE_MOVING:
-            # print("moving")
+        new_state = analyzer.determine_new_state()
 
-            if x == self.x and y == self.y:
-                self.last_time = now
-                self.state = STATE_MOUSE_STOPPED
-            update_last_xy = True
+        # perform actions when state changes
+        if analyzer.state == STATE_MOUSE_STOPPED and new_state == STATE_MOUSE_MOVING:
+            self.clicker.on_movement_restart()
 
-        elif self.state == STATE_MOUSE_STOPPED:
-            # print("stopped")
+        # perform actions whilst within specific states
+        if new_state == STATE_MOUSE_STANDSTILL:
+            new_state = self.clicker.on_standstill(analyzer.prev_x, analyzer.prev_y, self.is_left_down())
 
-            if x == self.x and y == self.y:
-                if now - self.last_time >= self.clicker.standstill_delay():
-                    self.last_time = now
-                    # self._dwell_x, self._dwell_y = ctrl.mouse_pos()
-                    update_last_xy = True
-                    self.state = self.clicker.on_standstill(self.x, self.y, self.is_left_down())
-            else:
-                update_last_xy = True
-                self.state = STATE_MOUSE_MOVING
-                self.clicker.on_movement_restart()
-        elif self.state == STATE_DISPLAYING_OPTIONS:
-            on_panel_display_result = self.clicker.on_panel_display(x, y)
+        elif new_state == STATE_DISPLAYING_OPTIONS:
+            x, y = ctrl.mouse_pos()
+            display_result = self.clicker.on_panel_display(x, y)
 
-            self.state = on_panel_display_result.next_state
-            self.suppress_next_update = on_panel_display_result.suppress_next_update
-            update_last_xy = on_panel_display_result.update_last_xy
-            
-        if update_last_xy:
-            self.x, self.y = ctrl.mouse_pos()
+            new_state = display_result.next_state
+            analyzer.suppress_next_update = display_result.suppress_next_update
+            if display_result.update_last_xy:
+                analyzer.do_update_last_xy()
+
+        analyzer.state = new_state
 
 cm = clickless_mouse()
 

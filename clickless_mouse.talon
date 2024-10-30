@@ -5,6 +5,9 @@ settings():
     user.clickless_mouse_method = "two_stage"
 
     ### single stage clicker options
+
+    # the time required to dwell before the next action is triggered (default left click)
+    # next action set by calling user.clickless_mouse_next_standstill_action
     # see option below: user.clickless_mouse_dwell_time
 
     ### two stage clicker options

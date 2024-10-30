@@ -25,7 +25,6 @@ class mouse_state_analyzer:
 
     def is_left_down(self):
         return left_mouse_button_index in ctrl.mouse_buttons_down()
-        self._dwell_x, self._dwell_y = ctrl.mouse_pos()
 
     def determine_new_state(self) -> int:
         # print("update")
@@ -60,7 +59,14 @@ class mouse_state_analyzer:
         elif self.state == STATE_MOUSE_STOPPED:
             # print("stopped")
 
-            if same_position:
+            if len(ctrl.mouse_buttons_down()) > 0:
+                # if the user is manually (all through voice etc) pressing one or more of the mouse buttons,
+                # then it seems unlikely that when they release the button, that they would want us to automatically 
+                # perform a click when they let go
+                new_state = STATE_MOUSE_IDLE
+                update_last_xy = True
+
+            elif same_position:
                 if now - self.last_stopped_time >= self.standstill_delay:
                     # self.last_time = now
                     # self._dwell_x, self._dwell_y = ctrl.mouse_pos()

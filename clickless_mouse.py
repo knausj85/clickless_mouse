@@ -129,16 +129,24 @@ class clickless_mouse:
         elif self.update_cron:
             cron.cancel(self.update_cron)
             self.update_cron = None
-            self.state = STATE_MOUSE_IDLE
             self.clicker.on_disable()
+        
+        self.state = STATE_MOUSE_IDLE
 
 
     def create_clicker(self):
-        match settings.get("user.clickless_mouse_method"):
+        method_name = settings.get("user.clickless_mouse_method")
+        # print("create clicker: ", method_name)
+        match method_name:
             case "single_stage":
                 clicker = single_stage_clicker()
-            case _:
+            case "two_stage":
                 clicker = two_stage_clicker()
+            case _:
+                if method_name != "":
+                    print("invalid value for user.clickless_mouse_method:", method_name)
+                clicker = two_stage_clicker()
+
         return clicker
     
     def toggle(self):
@@ -149,6 +157,8 @@ class clickless_mouse:
         analyzer = self.mouse_state_analyzer
 
         new_state = analyzer.determine_new_state()
+        # if analyzer.state != new_state:
+        #     print("previous:", analyzer.state, "new:", new_state)
 
         # perform actions when state changes
         if analyzer.state == STATE_MOUSE_STOPPED and new_state == STATE_MOUSE_MOVING:

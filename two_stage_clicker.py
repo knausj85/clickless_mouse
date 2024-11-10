@@ -16,11 +16,11 @@ class two_stage_clicker(clicker_base):
     def standstill_delay(self) -> int:
         return settings.get("user.clickless_mouse_auto_hide_time")
     
-    def on_standstill(self, x, y, is_left_down) -> int:
+    def on_standstill(self, x, y, is_left_down) -> tuple[int, int]:
         self._dwell_x, self._dwell_y = x, y
         self.crosshair_x, self.crosshair_y = x, y
         self.dwell_panel.create_panel(x, y, is_left_down)
-        return STATE_DISPLAYING_OPTIONS
+        return STATE_DISPLAYING_OPTIONS, STANDSTILL_DETECT_ALWAYS
 
     def on_movement_restart(self):
         self.dwell_panel.clear_button_positions()

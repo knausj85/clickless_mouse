@@ -60,7 +60,7 @@ class mouse_state_analyzer:
             # print("stopped")
 
             if len(ctrl.mouse_buttons_down()) > 0:
-                # if the user is manually (all through voice etc) pressing one or more of the mouse buttons,
+                # if the user is manually (or through voice etc) pressing one or more of the mouse buttons,
                 # then it seems unlikely that when they release the button, that they would want us to automatically 
                 # perform a click when they let go
                 new_state = STATE_MOUSE_IDLE

@@ -21,7 +21,7 @@ class clicker_base(ABC):
         """set the action to be performed when the next standstill occurs"""
         pass
 
-    def on_standstill(self, x, y, is_left_down) -> int:
+    def on_standstill(self, x, y, is_left_down) -> tuple[int, int]:
         """called when the mouse has stopped for the user defined duration"""
         pass
 

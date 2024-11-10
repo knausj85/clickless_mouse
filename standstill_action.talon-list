@@ -1,0 +1,18 @@
+list: user.clickless_mouse_action
+-
+
+left: left_click
+left click: left_click
+
+right: right_click
+right click: right_click
+
+hover: hover
+
+duke: left_dubclick
+dubclick: left_dubclick
+left duke: left_dubclick
+left dubclick: left_dubclick
+
+drag: left_drag
+left drag: left_drag

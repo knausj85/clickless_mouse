@@ -166,7 +166,7 @@ class clickless_mouse:
 
         # perform actions whilst within specific states
         if new_state == STATE_MOUSE_STANDSTILL:
-            new_state = self.clicker.on_standstill(analyzer.prev_x, analyzer.prev_y, self.is_left_down())
+            new_state, next_standstill_detection = self.clicker.on_standstill(analyzer.prev_x, analyzer.prev_y, self.is_left_down())
 
         elif new_state == STATE_DISPLAYING_OPTIONS:
             x, y = ctrl.mouse_pos()

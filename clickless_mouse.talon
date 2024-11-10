@@ -2,7 +2,7 @@
 settings():
     ### clicker method
     # either "single_stage" or "two_stage"
-    user.clickless_mouse_method = "two_stage"
+    user.clickless_mouse_method = "single_stage"
 
     ### single stage clicker options
 
@@ -27,8 +27,9 @@ settings():
     user.clickless_mouse_prevent_redisplay_for_minor_motions = 0
 
 ^click less mouse$: user.clickless_mouse_toggle()
+^click less enable$: user.clickless_mouse_enable()
+^click less disable$: user.clickless_mouse_disable()
 
 # command specific to single_stage
-^click less left [click]$: user.clickless_mouse_next_standstill_action("left_click")
-^click less right [click]$: user.clickless_mouse_next_standstill_action("right_click")
-^click less hover$: user.clickless_mouse_next_standstill_action("hover")
+^click less {user.clickless_mouse_action}$: 
+    user.clickless_mouse_next_standstill_action(clickless_mouse_action)

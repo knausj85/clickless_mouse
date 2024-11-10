@@ -123,6 +123,7 @@ class clickless_mouse:
         if self.enabled:
             self.clicker = self.create_clicker()
             self.mouse_state_analyzer.set_standstill_delay(self.clicker.standstill_delay())
+            self.mouse_state_analyzer.set_standstill_detection(STANDSTILL_DETECT_ONLY_IF_MOUSE_BUTTONS_UP)
             self.mouse_state_analyzer.enable()
             self.update_cron = cron.interval("16ms", self.update)
             
@@ -166,7 +167,11 @@ class clickless_mouse:
 
         # perform actions whilst within specific states
         if new_state == STATE_MOUSE_STANDSTILL:
+            # the clicker class's method tells us:
+            # 1. what is our next state
+            # 2. info to pass on to the mouse analyzer
             new_state, next_standstill_detection = self.clicker.on_standstill(analyzer.prev_x, analyzer.prev_y, self.is_left_down())
+            self.mouse_state_analyzer.set_standstill_detection(next_standstill_detection)
 
         elif new_state == STATE_DISPLAYING_OPTIONS:
             x, y = ctrl.mouse_pos()

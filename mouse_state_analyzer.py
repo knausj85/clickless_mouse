@@ -10,6 +10,7 @@ class mouse_state_analyzer:
         self.state = STATE_MOUSE_IDLE
         self.last_stopped_time = None
         self.standstill_delay = 0
+        self.standstill_detection = STANDSTILL_DETECT_ONLY_IF_MOUSE_BUTTONS_UP
 
         # after moving the mouse to perform an action,
         # avoid a state change in the first update.
@@ -19,6 +20,9 @@ class mouse_state_analyzer:
     def set_standstill_delay(self, delay):
         self.standstill_delay = delay
 
+    def set_standstill_detection(self, detection):
+        self.standstill_detection = detection
+
     def enable(self):
         self.x, self.y = ctrl.mouse_pos()
         self._dwell_x, self._dwell_y = ctrl.mouse_pos()
@@ -26,6 +30,9 @@ class mouse_state_analyzer:
     def is_left_down(self):
         return left_mouse_button_index in ctrl.mouse_buttons_down()
 
+    def are_any_buttons_down(self):
+        return len(ctrl.mouse_buttons_down()) > 0
+    
     def determine_new_state(self) -> int:
         # print("update")
         x, y = ctrl.mouse_pos()
@@ -59,7 +66,7 @@ class mouse_state_analyzer:
         elif self.state == STATE_MOUSE_STOPPED:
             # print("stopped")
 
-            if len(ctrl.mouse_buttons_down()) > 0:
+            if self.are_any_buttons_down() and self.standstill_detection == STANDSTILL_DETECT_ONLY_IF_MOUSE_BUTTONS_UP:
                 # if the user is manually (or through voice etc) pressing one or more of the mouse buttons,
                 # then it seems unlikely that when they release the button, that they would want us to automatically 
                 # perform a click when they let go

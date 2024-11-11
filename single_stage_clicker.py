@@ -12,10 +12,18 @@ class single_stage_clicker(clicker_base):
         return settings.get("user.clickless_mouse_dwell_time")
 
     def set_next_standstill_action(self, action):
+        if action == "end_repeat":
+            self.next_standstill_action = "left_click"
+            self.action_mode = None
+        else:
+            self.next_standstill_action, self.action_mode, self.repeat_standstill_action = self.__parse_action__(action)
+
+    def __parse_action__(self, action):
         list = action.split("+")
-        self.next_standstill_action = list[0]
-        self.action_mode = list[1] if len(list) > 1 else None
-        self.repeat_standstill_action = self.next_standstill_action if self.action_mode == "repeat" else None
+        next_standstill_action = list[0]
+        action_mode = list[1] if len(list) > 1 else None
+        repeat_standstill_action = next_standstill_action if action_mode == "repeat" else None
+        return next_standstill_action, action_mode, repeat_standstill_action
 
     def on_disable(self):
         pass

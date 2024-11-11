@@ -16,6 +16,7 @@ left dubclick: left_dubclick
 
 drag: left_drag
 left drag: left_drag
-
 drag repeat: "left_drag+repeat"
 left drag repeat: "left_drag+repeat"
+
+end repeat: "end_repeat"

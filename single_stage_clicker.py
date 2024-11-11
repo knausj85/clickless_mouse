@@ -6,12 +6,16 @@ from .constants import *
 class single_stage_clicker(clicker_base):
     def __init__(self):
         self.next_standstill_action = "left_click"
+        self.action_mode = None
 
     def standstill_delay(self) -> int:
         return settings.get("user.clickless_mouse_dwell_time")
 
     def set_next_standstill_action(self, action):
-        self.next_standstill_action = action
+        list = action.split("+")
+        self.next_standstill_action = list[0]
+        self.action_mode = list[1] if len(list) > 1 else None
+        self.repeat_standstill_action = self.next_standstill_action if self.action_mode == "repeat" else None
 
     def on_disable(self):
         pass
@@ -33,6 +37,9 @@ class single_stage_clicker(clicker_base):
                 next_standstill_detection = STANDSTILL_DETECT_ALWAYS
             case "end_drag":
                 actions.user.mouse_drag_end()
+                if self.action_mode == "repeat":
+                    next_action = self.repeat_standstill_action
+
 
         self.next_standstill_action = next_action
         return STATE_MOUSE_IDLE, next_standstill_detection

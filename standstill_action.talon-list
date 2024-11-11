@@ -1,5 +1,6 @@
 list: user.clickless_mouse_action
 -
+# Actions relevant for the single stage clicker only
 
 left: left_click
 left click: left_click

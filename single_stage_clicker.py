@@ -3,6 +3,9 @@ from talon import Module, Context, app, ctrl, cron, actions, settings
 from .clicker_base import clicker_base, on_panel_display_result
 from .constants import *
 
+# This single stage clicker was inspired by a Windows 95 era utility called "MouseTool" 
+# written by Jeff Roush, www.MouseTool.com
+
 class single_stage_clicker(clicker_base):
     def __init__(self):
         self.next_standstill_action = "left_click"

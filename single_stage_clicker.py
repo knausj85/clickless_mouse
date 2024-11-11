@@ -13,6 +13,7 @@ class single_stage_clicker(clicker_base):
 
     def set_next_standstill_action(self, action):
         if action == "end_repeat":
+            actions.user.mouse_drag_end()
             self.next_standstill_action = "left_click"
             self.action_mode = None
         else:

@@ -14,6 +14,11 @@ dubclick: left_dubclick
 left duke: left_dubclick
 left dubclick: left_dubclick
 
+trip click: left_trip_click
+trip lick: left_trip_click
+left trip click: left_trip_click
+left trip lick: left_trip_click
+
 drag: left_drag
 left drag: left_drag
 drag repeat: "left_drag+repeat"

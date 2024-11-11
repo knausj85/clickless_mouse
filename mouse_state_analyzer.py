@@ -66,10 +66,7 @@ class mouse_state_analyzer:
         elif self.state == STATE_MOUSE_STOPPED:
             # print("stopped")
 
-            if self.are_any_buttons_down() and self.standstill_detection == STANDSTILL_DETECT_ONLY_IF_MOUSE_BUTTONS_UP:
-                # if the user is manually (or through voice etc) pressing one or more of the mouse buttons,
-                # then it seems unlikely that when they release the button, that they would want us to automatically 
-                # perform a click when they let go
+            if not self.mouse_standstill_detection_wanted():
                 new_state = STATE_MOUSE_IDLE
                 update_last_xy = True
 
@@ -108,3 +105,16 @@ class mouse_state_analyzer:
     def do_update_last_xy(self):
         self.prev_x, self.prev_y = self.x, self.y
         self.x, self.y = ctrl.mouse_pos()
+
+    def mouse_standstill_detection_wanted(self):
+        if self.standstill_detection == STANDSTILL_DETECT_ONLY_IF_MOUSE_BUTTONS_UP:
+            # if the user is manually pressing one or more of the mouse buttons,
+            # then it seems unlikely that when they release the button, that they would want us to automatically 
+            # perform a click when they let go
+            result = not self.are_any_buttons_down()
+        else:
+            # (self.standstill_detection == STANDSTILL_DETECT_ALWAYS)
+            # an exception is when we are using the single_stage clicker and it is performing a drag.
+            # at this time we still need to detect a standstill as that is the signal to terminate the drag.
+            result = True
+        return result

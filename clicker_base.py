@@ -14,7 +14,7 @@ class clicker_base(ABC):
         pass
 
     def standstill_delay(self) -> int:
-        """delay after mouse stops moving before on_standstill is called"""
+        """delay after mouse stops moving before on_standstill should be called"""
         pass
 
     def set_next_standstill_action(self, action):
@@ -30,5 +30,5 @@ class clicker_base(ABC):
         pass
     
     def on_panel_display(self, x, y) -> on_panel_display_result:
-        """called when the mouse has started moving again from the stopped state"""
+        """called when the mouse has started moving again from the displaying options state"""
         pass

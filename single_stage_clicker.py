@@ -32,10 +32,15 @@ class single_stage_clicker(clicker_base):
     def on_standstill(self, x, y, is_left_down) -> tuple[int, int]:
         next_action = "left_click"
         next_standstill_detection = STANDSTILL_DETECT_ONLY_IF_MOUSE_BUTTONS_UP
+        
         match self.next_standstill_action:
             case "left_click":
                 ctrl.mouse_click(button=left_mouse_button_index)
             case "left_dubclick":
+                ctrl.mouse_click(button=left_mouse_button_index)
+                ctrl.mouse_click(button=left_mouse_button_index)
+            case "left_trip_click":
+                ctrl.mouse_click(button=left_mouse_button_index)
                 ctrl.mouse_click(button=left_mouse_button_index)
                 ctrl.mouse_click(button=left_mouse_button_index)
             case "right_click":

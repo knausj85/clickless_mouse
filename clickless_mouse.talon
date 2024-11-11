@@ -2,7 +2,7 @@
 settings():
     ### clicker method
     # either "single_stage" or "two_stage"
-    user.clickless_mouse_method = "single_stage"
+    user.clickless_mouse_method = "two_stage"
 
     ### common options
     user.clickless_mouse_dwell_time = .5

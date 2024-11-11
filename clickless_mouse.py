@@ -137,7 +137,7 @@ class clickless_mouse:
 
     def create_clicker(self):
         method_name = settings.get("user.clickless_mouse_method")
-        print("create clicker: ", method_name)
+        # print("create clicker: ", method_name)
         match method_name:
             case "single_stage":
                 clicker = single_stage_clicker()

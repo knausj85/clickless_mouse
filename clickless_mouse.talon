@@ -5,7 +5,7 @@ settings():
     # the time required to dwell on an option before its triggered
     user.clickless_mouse_dwell_time = .5
     # the time the mouse must be idle before the options display
-    user.clickless_mouse_idle_time_before_display = .35
+    user.clickless_mouse_idle_time_before_display = .50
     # toggle autohide hide. if <= 0, an "x" appears to exit the options.
     # otherwise, ka (keep alive) appears and the options auto hide
     user.clickless_mouse_auto_hide = 0

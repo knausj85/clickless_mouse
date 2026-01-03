@@ -76,7 +76,7 @@ auto_hide_time = mod.setting(
 mouse_idle = mod.setting(
     "clickless_mouse_idle_time_before_display",
     type=float,
-    default=0.35,
+    default=0.5,
     desc="The time the mouse must be idle before the clickless mouse options are displayed",
 )
 
@@ -447,7 +447,7 @@ class clickless_mouse:
             # print("stopped")
 
             if x == self.x and y == self.y:
-                if now - self.last_time >= settings.get("user.clickless_mouse_auto_hide_time"):
+                if now - self.last_time >= settings.get("user.clickless_mouse_idle_time_before_display"):
                     self.last_time = now
                     self._dwell_x, self._dwell_y = ctrl.mouse_pos()
                     screen = ui.screen_containing(self.x, self.y)

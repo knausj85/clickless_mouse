@@ -91,7 +91,7 @@ release_button_delay = mod.setting(
     "clickless_mouse_release_delay",
     type=int,
     default=150,
-    desc="The delay (ms) before releasing the held mouse button",
+    desc="The delay (ms) before releasing the held mouse button. Allows apps time to 'revert' selection changes due to selecting release option",
 )
 
 
@@ -126,7 +126,7 @@ scroll_distance = mod.setting(
     "clickless_mouse_scroll_distance",
     type=int,
     default=5,
-    desc="The width the stroke for the cursor position.",
+    desc="The amount to scroll on each update",
 )
 
 class dwell_button:

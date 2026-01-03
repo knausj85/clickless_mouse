@@ -90,7 +90,7 @@ radius = mod.setting(
 release_button_delay = mod.setting(
     "clickless_mouse_release_delay",
     type=int,
-    default=50,
+    default=150,
     desc="The delay (ms) before releasing the held mouse button",
 )
 
@@ -120,6 +120,12 @@ stroke_width = mod.setting(
     "clickless_mouse_stroke_width",
     type=int,
     default=3,
+    desc="The width the stroke for the cursor position.",
+)
+scroll_distance = mod.setting(
+    "clickless_mouse_scroll_distance",
+    type=int,
+    default=5,
     desc="The width the stroke for the cursor position.",
 )
 
@@ -542,11 +548,11 @@ class clickless_mouse:
                         actions.sleep("{}ms".format(settings.get("user.clickless_mouse_release_delay")))
                         ctrl.mouse_click(button=right_mouse_button_index, up=True)
                 elif item_hit.action == "su":
-                    actions.mouse_scroll(y=-10)
+                    actions.mouse_scroll(y=-settings.get("user.clickless_mouse_scroll_distance"))
                     draw_options = True
 
                 elif item_hit.action == "sd":
-                    actions.mouse_scroll(y=10)
+                    actions.mouse_scroll(settings.get("user.clickless_mouse_scroll_distance"))
                     draw_options = True
                 elif item_hit.action == "ka":
                     draw_options = True
